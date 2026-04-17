@@ -1,0 +1,195 @@
+@page "/pit/import"
+@inject Csla.ApplicationContext ApplicationContext
+@inject PitExcelImporter Importer
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Import PIT Excel</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Import staff from Excel</MudText>
+
+<MudExpansionPanels Elevation="0" Class="mb-4">
+    <MudExpansionPanel Text="File requirements" Icon="@Icons.Material.Filled.Info">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">File &amp; sheet</MudText>
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.InsertDriveFile">
+                        <MudText Typo="Typo.body2"><b>.xlsx</b> format, max <b>10 MB</b></MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.TableChart">
+                        <MudText Typo="Typo.body2">Sheet named exactly <code>Import form</code></MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.TableRows">
+                        <MudText Typo="Typo.body2">Row 5 = canonical system field names (header). Rows 1–4 are free for human labels.</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Numbers">
+                        <MudText Typo="Typo.body2">Row 6+ = staff records. Blank rows are skipped.</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Required headers (row 5)</MudText>
+                <div>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">ProformaNo</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">TaxPayerTaxCode</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">TaxPayerName</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">IncomePaymentYear</MudChip>
+                </div>
+                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Optional headers</MudText>
+                <div>
+                    @foreach (var opt in _optionalHeaders)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@opt</MudChip>
+                    }
+                </div>
+                <MudText Typo="Typo.caption" Class="mt-2 d-block">Unknown headers are ignored.</MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Per-row rules</MudText>
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
+                        <MudText Typo="Typo.body2"><code>TaxPayerTaxCode</code> must be <b>exactly 10 or 13 digits</b> (digits only).</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
+                        <MudText Typo="Typo.body2"><code>IncomePaymentMonthFrom</code> ≤ <code>IncomePaymentMonthTo</code> when both are set.</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
+                        <MudText Typo="Typo.body2">Amounts: invariant culture, no thousands separators (Excel numeric cells are fine).</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
+                        <MudText Typo="Typo.body2">Dates: Excel date cells preferred (any parseable ISO/locale string also accepted).</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.SwapHoriz">
+                        <MudText Typo="Typo.body2">Replacement certificate: populate <code>RelatedProformaNo</code> (+ optionally <code>RelatedFormNo</code>).</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudStack Row="true" Spacing="2" Class="mt-2">
+                    <MudButton Href="samples/epit-sample-valid.xlsx" Target="_blank"
+                               Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Download">
+                        Download sample (valid)
+                    </MudButton>
+                    <MudButton Href="samples/epit-sample-with-errors.xlsx" Target="_blank"
+                               Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Download">
+                        Sample with errors (for reference)
+                    </MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+        <InputFile id="xlsxInput" OnChange="OnInputFileChange" accept=".xlsx" hidden />
+        <MudButton HtmlTag="label" for="xlsxInput" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload">
+            Choose .xlsx file
+        </MudButton>
+        @if (_fileName is not null)
+        {
+            <MudText Typo="Typo.body2">@_fileName (@_fileSize bytes)</MudText>
+        }
+    </MudStack>
+</MudPaper>
+
+@if (_result is not null)
+{
+    <MudAlert Severity="@(_result.HasErrors ? Severity.Error : Severity.Success)" Class="mb-3">
+        Parsed @_result.Rows.Count rows. Errors: @_result.ErrorCount. Warnings: @_result.WarningCount.
+    </MudAlert>
+
+    @if (_result.Diagnostics.Count > 0)
+    {
+        <MudText Typo="Typo.h6" Class="mb-2">Diagnostics</MudText>
+        <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
+            <thead><tr><th>Cell</th><th>Row</th><th>Column</th><th>Field</th><th>Severity</th><th>Message</th></tr></thead>
+            <tbody>
+            @foreach (var d in _result.Diagnostics)
+            {
+                <tr>
+                    <td><strong>@d.CellRef</strong></td>
+                    <td>@d.RowNumber</td>
+                    <td>@d.ColumnLetter@(d.ColumnNumber.HasValue ? $" ({d.ColumnNumber})" : "")</td>
+                    <td>@d.Field</td>
+                    <td>@d.Severity</td>
+                    <td>@d.Message</td>
+                </tr>
+            }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(_result.HasErrors || _committing)"
+                   OnClick="CommitAsync">
+            @(_committing ? "Importing..." : $"Import {_result.Rows.Count} rows")
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Reset">Clear</MudButton>
+    </MudStack>
+}
+
+@code {
+    private string? _fileName;
+    private long _fileSize;
+    private PitImportResult? _result;
+    private bool _committing;
+
+    private static readonly string[] _optionalHeaders =
+    [
+        "TaxPayerCode", "Nationality", "ResidentType", "IdentificationNo",
+        "IssueDate", "IssuePlace", "Phone", "Email", "Address",
+        "InsurancePremiums", "CharityDonations",
+        "IncomePaymentMonthFrom", "IncomePaymentMonthTo",
+        "TotalTaxableIncome", "AmountPersonalIncomeTax",
+        "IncomeStillReceivable", "IncomeType", "Note",
+        "RelatedProformaNo", "RelatedFormNo"
+    ];
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        _fileName = file.Name;
+        _fileSize = file.Size;
+        await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+        _result = Importer.Parse(ms);
+    }
+
+    private async Task CommitAsync()
+    {
+        if (_result is null || _result.HasErrors) return;
+        _committing = true;
+        try
+        {
+            var n = await Importer.CommitAsync(ApplicationContext, _result.Rows);
+            Snackbar.Add($"Imported {n} certificates.", Severity.Success);
+            Navigation.NavigateTo("/pit/certificates");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _committing = false;
+        }
+    }
+
+    private void Reset()
+    {
+        _fileName = null;
+        _fileSize = 0;
+        _result = null;
+    }
+}

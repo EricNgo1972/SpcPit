@@ -1,0 +1,105 @@
+@page "/pit/settings"
+@inject Csla.ApplicationContext ApplicationContext
+@inject ISnackbar Snackbar
+
+<PageTitle>PIT Settings</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
+
+@if (_settings is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-6" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Organization (employer)</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Tax code (MST)" @bind-Value="_settings.OrganizationTaxCode" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Name" @bind-Value="_settings.OrganizationName" Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Label="Address" @bind-Value="_settings.OrganizationAddress" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Phone" @bind-Value="_settings.OrganizationPhone" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Email" @bind-Value="_settings.OrganizationEmail" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Representative name" @bind-Value="_settings.RepresentativeName" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Representative title" @bind-Value="_settings.RepresentativeTitle" />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-3">QĐ 1306 envelope</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudTextField Label="Sender code (MNGui prefix)" @bind-Value="_settings.SenderCode" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField Label="Schema version (PBan)" @bind-Value="_settings.XmlSchemaVersion" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField Label="Message type code (MLTDiep)" @bind-Value="_settings.XmlMessageTypeCode" />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-3">External services</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="LocalAgent sign URL" @bind-Value="_settings.LocalAgentSignUrl" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="TVAN provider" @bind-Value="_settings.TvanProviderName" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField Label="TVAN submit URL" @bind-Value="_settings.TvanSubmitUrl" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private SPC.BO.PIT.PitSettings? _settings;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_settings is null) return;
+        _saving = true;
+        try
+        {
+            _settings = await _settings.SaveAsync();
+            Snackbar.Add("Settings saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

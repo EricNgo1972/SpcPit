@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SPC.DAL.SQLite.PIT</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.*" />
+    <PackageReference Include="SqlKata" Version="4.0.1" />
+    <PackageReference Include="SqlKata.Execution" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL\SPC.DAL.csproj" />
+    <ProjectReference Include="..\..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL.SQLite\SPC.DAL.SQLite.csproj" />
+    <ProjectReference Include="..\SPC.BO.PIT\SPC.BO.PIT.csproj" />
+  </ItemGroup>
+
+</Project>

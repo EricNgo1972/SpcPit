@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SPC.Blazor.PIT</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" Version="9.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.Blazor\SPC.Blazor.csproj" />
+    <ProjectReference Include="..\SPC.BO.PIT\SPC.BO.PIT.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\SPC.Infrastructure.XmlSigning\SPC.Infrastructure.XmlSigning.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\SPC.Infrastructure.TvanSubmission\SPC.Infrastructure.TvanSubmission.csproj" />
+  </ItemGroup>
+
+</Project>

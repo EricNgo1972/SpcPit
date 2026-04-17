@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import openpyxl; print\\('openpyxl available'\\)\")",
+      "Read(//tmp/**)",
+      "Bash(unzip -q /mnt/c/Users/tung/Downloads/EPIT_Structure.xlsx -d xlsx_extract)",
+      "Bash(unzip -p \"/mnt/c/Users/tung/Downloads/QĐ1306_13062025_Quy dinh ky thuat_HDDT_note.docx\" word/document.xml)",
+      "Bash(python3 *)"
+    ]
+  }
+}

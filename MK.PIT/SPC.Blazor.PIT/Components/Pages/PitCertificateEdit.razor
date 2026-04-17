@@ -1,0 +1,107 @@
+@page "/pit/certificates/{Id}"
+@inject Csla.ApplicationContext ApplicationContext
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Edit PIT Certificate</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Certificate</MudText>
+
+@if (_cert is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    var readOnly = _cert.Status == CertificateStatus.Accepted;
+    <MudPaper Class="pa-6" Elevation="1">
+        @if (readOnly)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-3" Icon="@Icons.Material.Filled.Lock">
+                <b>Locked.</b> This certificate has received a mã CQT (@_cert.CqtCode) from the tax authority and can no longer be edited. Only downloads are permitted.
+            </MudAlert>
+        }
+
+        <MudText Typo="Typo.h6" Class="mb-3">Tax payer</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6"><MudTextField Label="Proforma no." @bind-Value="_cert.ProformaNo" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Tax payer code" @bind-Value="_cert.TaxPayerCode" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="MST" @bind-Value="_cert.TaxPayerTaxCode" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Name" @bind-Value="_cert.TaxPayerName" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Nationality" @bind-Value="_cert.Nationality" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Resident type" @bind-Value="_cert.ResidentType" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="ID no." @bind-Value="_cert.IdentificationNo" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudDatePicker Label="Issue date" @bind-Date="_cert.IssueDate" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Phone" @bind-Value="_cert.Phone" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Email" @bind-Value="_cert.Email" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12"><MudTextField Label="Address" @bind-Value="_cert.Address" ReadOnly="readOnly" /></MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.h6" Class="mb-3">Withholding</MudText>
+        <MudGrid>
+            <MudItem xs="6" md="3"><MudNumericField T="int" Label="Year" @bind-Value="_cert.IncomePaymentYear" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="From month" @bind-Value="_cert.IncomePaymentMonthFrom" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="To month" @bind-Value="_cert.IncomePaymentMonthTo" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudTextField Label="Income type" @bind-Value="_cert.IncomeType" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="Taxable income" @bind-Value="_cert.TotalTaxableIncome" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="PIT withheld" @bind-Value="_cert.AmountPersonalIncomeTax" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Insurance premiums" @bind-Value="_cert.InsurancePremiums" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Charity donations" @bind-Value="_cert.CharityDonations" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Still receivable" @bind-Value="_cert.IncomeStillReceivable" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12"><MudTextField Label="Note" @bind-Value="_cert.Note" ReadOnly="readOnly" Lines="2" /></MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.h6" Class="mb-3">Lifecycle</MudText>
+        <MudStack Row="true">
+            <MudChip T="string" Color="Color.Info">Status: @_cert.Status</MudChip>
+            @if (!string.IsNullOrEmpty(_cert.MessageId))
+            {
+                <MudChip T="string" Color="Color.Default">MessageId: @_cert.MessageId</MudChip>
+            }
+            @if (!string.IsNullOrEmpty(_cert.CqtCode))
+            {
+                <MudChip T="string" Color="Color.Success">CQT: @_cert.CqtCode</MudChip>
+            }
+        </MudStack>
+
+        <MudStack Row="true" Class="mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(readOnly || _saving)">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/certificates"))">Back</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+    private PitCertificate? _cert;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cert = await ApplicationContext.GetRequiredService<IDataPortalFactory>()
+            .GetPortal<PitCertificate>().FetchAsync(Id);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_cert is null) return;
+        _saving = true;
+        try
+        {
+            _cert.UpdatedAt = DateTime.UtcNow;
+            _cert = await _cert.SaveAsync();
+            Snackbar.Add("Saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -1,0 +1,59 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject SPC.BO.Services.ThemeService Theme
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<MudThemeProvider Theme="SPC.Blazor.AppMudTheme.Instance" IsDarkMode="Theme.IsDarkMode" />
+<MudDialogProvider />
+<MudPopoverProvider />
+<MudSnackbarProvider />
+
+<div class="app-theme @Theme.ThemeClass">
+    <MudAppBar Fixed="false" Elevation="0" Dense="true" Class="crm-appbar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@ToggleDrawer" Class="shell-menu-toggle" />
+        <div class="appbar-module-mark" style="background:#9f7b39">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" Style="color:#fff" />
+        </div>
+        <MudText Typo="Typo.h6">SPC PIT — Chứng từ khấu trừ thuế TNCN</MudText>
+        <MudSpacer />
+        <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit" OnClick="@ToggleTheme" />
+    </MudAppBar>
+
+    <div class="shell-layout">
+        <aside class="shell-sidebar @(_drawerOpen ? "sidebar-open" : "sidebar-closed")">
+            <NavMenu />
+        </aside>
+
+        <div class="shell-main">
+            <MudContainer MaxWidth="MaxWidth.False" Class="crm-content">
+                @Body
+            </MudContainer>
+        </div>
+    </div>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">x</a>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        Theme.OnChange += OnThemeChanged;
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleTheme() => Theme.Toggle();
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Theme.OnChange -= OnThemeChanged;
+    }
+}

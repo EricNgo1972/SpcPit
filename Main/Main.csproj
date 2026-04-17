@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Csla" Version="8.*" />
+    <PackageReference Include="Csla.AspNetCore" Version="8.*" />
+    <PackageReference Include="MudBlazor" Version="9.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.BO\SPC.BO.csproj" />
+    <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL\SPC.DAL.csproj" />
+    <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL.SQLite\SPC.DAL.SQLite.csproj" />
+    <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.Blazor\SPC.Blazor.csproj" />
+    <ProjectReference Include="..\MK.PIT\SPC.BO.PIT\SPC.BO.PIT.csproj" />
+    <ProjectReference Include="..\MK.PIT\SPC.DAL.SQLite.PIT\SPC.DAL.SQLite.PIT.csproj" />
+    <ProjectReference Include="..\MK.PIT\SPC.Blazor.PIT\SPC.Blazor.PIT.csproj" />
+    <ProjectReference Include="..\Infrastructure\SPC.Infrastructure.XmlSigning\SPC.Infrastructure.XmlSigning.csproj" />
+    <ProjectReference Include="..\Infrastructure\SPC.Infrastructure.TvanSubmission\SPC.Infrastructure.TvanSubmission.csproj" />
+  </ItemGroup>
+
+</Project>

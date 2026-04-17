@@ -1,0 +1,12 @@
+<Router AppAssembly="typeof(Program).Assembly"
+        AdditionalAssemblies="new[] { typeof(SPC.Blazor.PIT.Components.Pages.PitDashboard).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Main.Components.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Main.Components.Layout.MainLayout)">
+            <MudPaper Class="pa-6"><MudText Typo="Typo.h5">Page not found</MudText></MudPaper>
+        </LayoutView>
+    </NotFound>
+</Router>

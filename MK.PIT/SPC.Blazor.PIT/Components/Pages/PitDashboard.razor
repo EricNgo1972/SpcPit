@@ -1,0 +1,43 @@
+@page "/"
+@inject Csla.ApplicationContext ApplicationContext
+
+<PageTitle>PIT Dashboard</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+
+@if (_certs is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudGrid>
+        @foreach (var status in CertificateStatus.All)
+        {
+            var count = _certs.Count(c => c.Status == status);
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.caption">@status</MudText>
+                    <MudText Typo="Typo.h4">@count</MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudDivider Class="my-4" />
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Href="/pit/import" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload">Import Excel</MudButton>
+        <MudButton Href="/pit/certificates" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description">View certificates</MudButton>
+        <MudButton Href="/pit/settings" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Settings">Settings</MudButton>
+    </MudStack>
+}
+
+@code {
+    private PitCertificateInfoList? _certs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _certs = await PitCertificateInfoList.GetAllAsync(ApplicationContext);
+    }
+}

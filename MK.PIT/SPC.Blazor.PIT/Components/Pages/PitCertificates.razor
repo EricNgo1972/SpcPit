@@ -1,0 +1,553 @@
+@page "/pit/certificates"
+@using System.IO.Compression
+@using SPC.BO.PIT.Pdf
+@inject Csla.ApplicationContext ApplicationContext
+@inject IXmlSigningService SigningService
+@inject ITvanSubmissionService TvanService
+@inject PitPdfBuilder PdfBuilder
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>PIT Certificates</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Certificates</MudText>
+
+<MudExpansionPanels Elevation="0" Class="mb-4">
+    <MudExpansionPanel Text="XML mapping &amp; government rules (QĐ 1306/QĐ-TCT, 13/06/2025)"
+                       Icon="@Icons.Material.Filled.Gavel">
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Each PIT withholding certificate is emitted as a UTF-8 XML document following the General Department of
+            Taxation's technical specification <b>Quyết định 1306/QĐ-TCT (13/06/2025)</b>. The signed XML is what gets
+            submitted to the tax authority; HR data (entered in this app) plus the employer's organization settings are
+            the single source of truth for every XML element.
+        </MudText>
+
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Envelope structure (§II)</MudText>
+                <MudPaper Class="pa-3" Style="font-family: var(--mud-typography-body1-family, monospace); font-size: 0.8rem; white-space: pre; overflow-x: auto;" Elevation="0">
+@($@"<{PitXmlSchema.TDiep}>
+  <{PitXmlSchema.TTChung}>            Message header
+    <{PitXmlSchema.PBan}>              Schema version (PitSettings.XmlSchemaVersion)
+    <{PitXmlSchema.MNGui}>             Sender code (PitSettings.SenderCode)
+    <{PitXmlSchema.MNNhan}>            Receiver = ""{PitXmlSchema.TaxAuthorityReceiver}""
+    <{PitXmlSchema.MLTDiep}>           Message type (PitSettings.XmlMessageTypeCode)
+    <{PitXmlSchema.MTDiep}>            32-char UUID, uppercase, no dashes
+    <{PitXmlSchema.MTDTChieu}>         Replacement ref (RelatedProformaNo)
+    <{PitXmlSchema.MST}>               Employer MST
+    <{PitXmlSchema.SLuong}>1</{PitXmlSchema.SLuong}>
+  <{PitXmlSchema.DLieu}>
+    <{PitXmlSchema.CTDTKhauTru}>       One cert per document
+      <{PitXmlSchema.DLCT}>
+        <{PitXmlSchema.TTChungCTu}>    Certificate identification
+        <{PitXmlSchema.TTTo}>          Organization (employer)
+        <{PitXmlSchema.TTNNT}>         Tax payer (staff)
+        <{PitXmlSchema.TTKhauTru}>     Withholding figures
+      <{PitXmlSchema.Signature} xmlns=""{PitXmlSchema.SignatureNs}""/>
+")
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Format rules (§I)</MudText>
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Code">
+                        <MudText Typo="Typo.body2">Encoding: <b>UTF-8</b>, no BOM, <code>TCVN 6909:2001</code>-compatible.</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">
+                        <MudText Typo="Typo.body2">Dates <code>yyyy-MM-dd</code>; datetimes <code>yyyy-MM-ddTHH:mm:ss</code> in <b>GMT+7</b> (Asia/Ho_Chi_Minh).</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
+                        <MudText Typo="Typo.body2">Amounts: ≤ 21 total digits, ≤ 6 decimal places, invariant culture, no thousands separators.</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.DataUsage">
+                        <MudText Typo="Typo.body2">Single message ≤ <b>2 MB</b>. One cert per document in this app.</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Fingerprint">
+                        <MudText Typo="Typo.body2">Signed with <b>W3C XML Digital Signature</b>; the generator inserts an empty <code>&lt;Signature&gt;</code> placeholder inside <code>&lt;@PitXmlSchema.CTDTKhauTru&gt;</code> — the LocalAgent fills it in.</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Field → XML mapping</MudText>
+                <MudSimpleTable Dense="true" Hover="true" Bordered="true">
+                    <thead>
+                        <tr><th>Group</th><th>Certificate field</th><th>XML element</th><th>Source</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _mappingTable)
+                        {
+                            <tr>
+                                <td><MudChip T="string" Size="Size.Small" Color="@row.Color">@row.Group</MudChip></td>
+                                <td><code>@row.Field</code></td>
+                                <td><code>@row.XmlTag</code></td>
+                                <td>@row.Source</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle</MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    Each certificate transitions through:
+                    <code>Draft</code> → <code>XmlGenerated</code> (unsigned bytes stored) →
+                    <code>Signed</code> (LocalAgent signed the envelope) →
+                    <code>Submitted</code> → <code>Accepted</code> (mã CQT returned) or <code>Rejected</code>.
+                </MudText>
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+                    <b>Still to be confirmed from QĐ 1306 Phụ lục:</b> the exact <code>MLTDiep</code> code for
+                    "Chứng từ khấu trừ thuế TNCN" and the precise <code>DLCT</code> child element names shown above.
+                    Corrections are localized to <code>PitXmlSchema.cs</code>; no generator changes required.
+                </MudAlert>
+            </MudItem>
+        </MudGrid>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+<MudPaper Class="pa-3 mb-3" Elevation="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.subtitle2">
+            @_selected.Count selected
+        </MudText>
+
+        <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                   StartIcon="@Icons.Material.Filled.Edit"
+                   Disabled="@(_selected.Count != 1 || _busy)"
+                   OnClick="OpenSelected">
+            Open
+        </MudButton>
+
+        <MudDivider Vertical="true" FlexItem="true" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Build"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="GenerateBulkAsync">
+            Generate XML
+        </MudButton>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                   StartIcon="@Icons.Material.Filled.Fingerprint"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="SignBulkAsync">
+            Sign
+        </MudButton>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Success"
+                   StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="SubmitBulkAsync">
+            Submit
+        </MudButton>
+
+        <MudDivider Vertical="true" FlexItem="true" />
+
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="@(() => DownloadBulkAsync(signed: false))">
+            Download Unsigned
+        </MudButton>
+
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="@(() => DownloadBulkAsync(signed: true))">
+            Download Signed
+        </MudButton>
+
+        <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                   Disabled="@(!_selected.Any() || _busy)"
+                   OnClick="GeneratePdfBulkAsync">
+            Download PDF
+        </MudButton>
+
+        @if (_busy)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+    </MudStack>
+</MudPaper>
+
+<MudStack Row="true" Class="mb-3" Spacing="2">
+    <MudSelect T="string" Label="Status" @bind-Value="_statusFilter" Clearable="true" Dense="true">
+        @foreach (var s in CertificateStatus.All)
+        {
+            <MudSelectItem T="string" Value="@s">@s</MudSelectItem>
+        }
+    </MudSelect>
+    <MudTextField T="int?" Label="Year" @bind-Value="_yearFilter" />
+    <MudTextField T="string" Label="Search name/MST" @bind-Value="_search" />
+</MudStack>
+
+@if (_certs is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudTable T="PitCertificateInfo" Items="Filtered" Dense="true" Hover="true" Bordered="true"
+              MultiSelection="true" @bind-SelectedItems="_selected">
+        <HeaderContent>
+            <MudTh>ProformaNo</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Tax code</MudTh>
+            <MudTh>Year</MudTh>
+            <MudTh>Taxable</MudTh>
+            <MudTh>Withheld</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Mã CQT</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.ProformaNo</MudTd>
+            <MudTd>@context.TaxPayerName</MudTd>
+            <MudTd>@context.TaxPayerTaxCode</MudTd>
+            <MudTd>@context.IncomePaymentYear</MudTd>
+            <MudTd>@context.TotalTaxableIncome.ToString("N0")</MudTd>
+            <MudTd>@context.AmountPersonalIncomeTax.ToString("N0")</MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                @if (IsLocked(context))
+                {
+                    <MudTooltip Text="Locked: mã CQT issued by tax authority. Downloads only.">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Success" Class="ml-1" />
+                    </MudTooltip>
+                }
+            </MudTd>
+            <MudTd>@context.CqtCode</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private PitCertificateInfoList? _certs;
+    private HashSet<PitCertificateInfo> _selected = [];
+    private string? _statusFilter;
+    private int? _yearFilter;
+    private string? _search;
+    private bool _busy;
+
+    private sealed record MappingRow(string Group, string Field, string XmlTag, string Source, Color Color);
+
+    private static readonly IReadOnlyList<MappingRow> _mappingTable =
+    [
+        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.PBan}",       "PitSettings.XmlSchemaVersion",            Color.Primary),
+        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MNGui}",      "PitSettings.SenderCode",                  Color.Primary),
+        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MLTDiep}",    "PitSettings.XmlMessageTypeCode",          Color.Primary),
+        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MTDiep}",     "Auto: 32-char UUID + sender prefix",      Color.Primary),
+        new("Envelope",    "RelatedProformaNo (if replacement)",   $"{PitXmlSchema.TTChung}/{PitXmlSchema.MTDTChieu}",  "PitCertificate.RelatedProformaNo",        Color.Primary),
+        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MST}",        "PitSettings.OrganizationTaxCode",         Color.Primary),
+
+        new("Cert id",     "ProformaNo",                           $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.CertNumber}",  "PitCertificate.ProformaNo",         Color.Info),
+        new("Cert id",     "TaxPayerCode",                         $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.CertFormNo}",  "PitCertificate.TaxPayerCode",       Color.Info),
+        new("Cert id",     "RelatedFormNo / RelatedProformaNo",    $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.RelatedCert}", "PitCertificate (replacement only)", Color.Info),
+
+        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.TMST}",          "PitSettings.OrganizationTaxCode",         Color.Secondary),
+        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OName}",         "PitSettings.OrganizationName",            Color.Secondary),
+        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OAddress}",      "PitSettings.OrganizationAddress",         Color.Secondary),
+        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OPhone}",        "PitSettings.OrganizationPhone",           Color.Secondary),
+        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OEmail}",        "PitSettings.OrganizationEmail",           Color.Secondary),
+
+        new("Tax payer",   "TaxPayerName",                         $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TName}",        "PitCertificate.TaxPayerName",             Color.Success),
+        new("Tax payer",   "TaxPayerTaxCode",                      $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TMST}",         "PitCertificate.TaxPayerTaxCode",          Color.Success),
+        new("Tax payer",   "Nationality",                          $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TNat}",         "PitCertificate.Nationality",              Color.Success),
+        new("Tax payer",   "ResidentType",                         $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TResType}",     "PitCertificate.ResidentType",             Color.Success),
+        new("Tax payer",   "IdentificationNo",                     $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIdNo}",        "PitCertificate.IdentificationNo",         Color.Success),
+        new("Tax payer",   "IssueDate",                            $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIssueDate}",   "PitCertificate.IssueDate (yyyy-MM-dd)",   Color.Success),
+        new("Tax payer",   "IssuePlace",                           $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIssuePlace}",  "PitCertificate.IssuePlace",               Color.Success),
+        new("Tax payer",   "Phone",                                $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TPhone}",       "PitCertificate.Phone",                    Color.Success),
+        new("Tax payer",   "Email",                                $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TEmail}",       "PitCertificate.Email",                    Color.Success),
+        new("Tax payer",   "Address",                              $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TAddress}",     "PitCertificate.Address",                  Color.Success),
+
+        new("Withholding", "IncomePaymentYear",                    $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodYear}",  "PitCertificate.IncomePaymentYear",     Color.Warning),
+        new("Withholding", "IncomePaymentMonthFrom",               $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodFrom}",  "PitCertificate.IncomePaymentMonthFrom",Color.Warning),
+        new("Withholding", "IncomePaymentMonthTo",                 $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodTo}",    "PitCertificate.IncomePaymentMonthTo",  Color.Warning),
+        new("Withholding", "IncomeType",                           $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TIncomeType}",  "PitCertificate.IncomeType",            Color.Warning),
+        new("Withholding", "TotalTaxableIncome",                   $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TTaxableIncome}","PitCertificate.TotalTaxableIncome",   Color.Warning),
+        new("Withholding", "AmountPersonalIncomeTax",              $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TTaxWithheld}", "PitCertificate.AmountPersonalIncomeTax",Color.Warning),
+        new("Withholding", "InsurancePremiums",                    $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TInsurance}",   "PitCertificate.InsurancePremiums",     Color.Warning),
+        new("Withholding", "CharityDonations",                     $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TCharity}",     "PitCertificate.CharityDonations",      Color.Warning),
+        new("Withholding", "IncomeStillReceivable",                $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TStillReceivable}","PitCertificate.IncomeStillReceivable",Color.Warning),
+        new("Withholding", "Note",                                 $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TNote}",        "PitCertificate.Note",                  Color.Warning),
+    ];
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        _certs = await PitCertificateInfoList.GetAllAsync(ApplicationContext);
+        _selected = [];
+    }
+
+    private IEnumerable<PitCertificateInfo> Filtered =>
+        (_certs ?? Enumerable.Empty<PitCertificateInfo>())
+            .Where(c => string.IsNullOrEmpty(_statusFilter) || c.Status == _statusFilter)
+            .Where(c => !_yearFilter.HasValue || c.IncomePaymentYear == _yearFilter.Value)
+            .Where(c => string.IsNullOrWhiteSpace(_search)
+                       || c.TaxPayerName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                       || c.TaxPayerTaxCode.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    private static Color StatusColor(string status) => status switch
+    {
+        CertificateStatus.Draft => Color.Default,
+        CertificateStatus.XmlGenerated => Color.Info,
+        CertificateStatus.Signed => Color.Warning,
+        CertificateStatus.Submitted => Color.Warning,
+        CertificateStatus.Accepted => Color.Success,
+        CertificateStatus.Rejected => Color.Error,
+        _ => Color.Default
+    };
+
+    // --- Eligibility ---
+    // Accepted certificates are LOCKED: they have a mã CQT issued by the tax authority and must
+    // not be mutated. Only downloads are permitted on locked rows.
+    // Sign/Submit are additionally idempotent: running them on an already-past-step row is a no-op.
+    // Generate XML is otherwise always allowed — the user can regenerate at any time.
+
+    private static bool IsLocked(PitCertificateInfo c) => c.Status == CertificateStatus.Accepted;
+
+    private static bool CanGenerate(PitCertificateInfo c) => !IsLocked(c);
+    private static bool CanSign(PitCertificateInfo c)     => !IsLocked(c) && c.Status == CertificateStatus.XmlGenerated;
+    private static bool CanSubmit(PitCertificateInfo c)   => !IsLocked(c) && c.Status == CertificateStatus.Signed;
+
+    // --- Single-row open ---
+
+    private void OpenSelected()
+    {
+        var c = _selected.SingleOrDefault();
+        if (c is not null)
+            Navigation.NavigateTo($"/pit/certificates/{c.PitCertificateId}");
+    }
+
+    // --- Bulk state-transition actions ---
+
+    private async Task GenerateBulkAsync()
+    {
+        // Regenerates UnsignedXml + MessageId on every selected row except those that have
+        // already received a mã CQT from the tax authority (those rows are locked).
+        await RunBulkAsync(
+            eligible: CanGenerate,
+            action: id => PitXmlCommand.GenerateUnsignedAsync(ApplicationContext, id),
+            verb: "Generate XML",
+            skipReason: "locked (has mã CQT)");
+    }
+
+    private async Task SignBulkAsync()
+    {
+        await RunBulkAsync(
+            eligible: CanSign,
+            action: async id =>
+            {
+                var cert = await ApplicationContext.GetRequiredService<IDataPortalFactory>()
+                    .GetPortal<PitCertificate>().FetchAsync(id);
+                var signed = await SigningService.SignAsync(cert.UnsignedXml ?? []);
+                await PitXmlCommand.MarkSignedAsync(ApplicationContext, id, signed);
+            },
+            verb: "Sign",
+            skipReason: "locked or not in XmlGenerated state");
+    }
+
+    private async Task SubmitBulkAsync()
+    {
+        await RunBulkAsync(
+            eligible: CanSubmit,
+            action: async id =>
+            {
+                var cert = await ApplicationContext.GetRequiredService<IDataPortalFactory>()
+                    .GetPortal<PitCertificate>().FetchAsync(id);
+                await PitXmlCommand.MarkSubmittedAsync(ApplicationContext, id);
+                var response = await TvanService.SubmitAsync(cert.SignedXml ?? []);
+                if (response.Accepted)
+                    await PitXmlCommand.MarkAcceptedAsync(ApplicationContext, id, response.CqtCode ?? "");
+                else
+                    await PitXmlCommand.MarkRejectedAsync(ApplicationContext, id, response.RejectReason ?? "Rejected");
+            },
+            verb: "Submit",
+            skipReason: "locked or not in Signed state");
+    }
+
+    /// <summary>
+    /// Core bulk runner: iterates the current selection, calls <paramref name="action"/> on every
+    /// row that satisfies <paramref name="eligible"/>, and silently skips the rest. Presents a
+    /// consolidated summary snackbar so repeating the same action is always safe (no-op on
+    /// already-completed rows) — second-run guarantee.
+    /// </summary>
+    private async Task RunBulkAsync(
+        Func<PitCertificateInfo, bool> eligible,
+        Func<string, Task> action,
+        string verb,
+        string skipReason)
+    {
+        if (_selected.Count == 0) return;
+        _busy = true;
+        var snapshot = _selected.ToList();
+        var done = 0;
+        var skipped = 0;
+        var failed = 0;
+        string? lastError = null;
+
+        foreach (var row in snapshot)
+        {
+            if (!eligible(row)) { skipped++; continue; }
+            try
+            {
+                await action(row.PitCertificateId);
+                done++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                lastError = ex.Message;
+            }
+        }
+
+        _busy = false;
+
+        var parts = new List<string>();
+        parts.Add($"{done} {verb.ToLowerInvariant()}d");
+        if (skipped > 0) parts.Add($"{skipped} skipped ({skipReason})");
+        if (failed > 0)  parts.Add($"{failed} failed");
+        var message = string.Join(", ", parts) + ".";
+
+        var severity = failed > 0 ? Severity.Error
+                     : done == 0 ? Severity.Info
+                     : Severity.Success;
+
+        if (failed > 0 && lastError is not null)
+            message += $" Last error: {lastError}";
+
+        Snackbar.Add(message, severity);
+        await ReloadAsync();
+    }
+
+    // --- Bulk PDF: single cert → .pdf, multiple → .zip ---
+
+    private async Task GeneratePdfBulkAsync()
+    {
+        if (_selected.Count == 0) return;
+        _busy = true;
+        try
+        {
+            var portal = ApplicationContext.GetRequiredService<IDataPortalFactory>().GetPortal<PitCertificate>();
+            var settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+            var settingsInput = PitSettingsXmlInput.From(settings);
+
+            var payloads = new List<(string Name, byte[] Bytes)>();
+
+            foreach (var row in _selected)
+            {
+                var cert = await portal.FetchAsync(row.PitCertificateId);
+                var ctx = new PitPdfBuildContext(
+                    Certificate: PitCertificateXmlInput.From(cert),
+                    Settings: settingsInput,
+                    CqtCode: cert.CqtCode,
+                    FormNumber: null,
+                    Series: null,
+                    IssuedOn: null);
+                var bytes = PdfBuilder.Build(ctx);
+                payloads.Add(($"CTKT-{cert.ProformaNo}.pdf", bytes));
+            }
+
+            if (payloads.Count == 1)
+            {
+                var (name, bytes) = payloads[0];
+                await JS.InvokeVoidAsync("spcPitDownload",
+                    name, Convert.ToBase64String(bytes), "application/pdf");
+            }
+            else
+            {
+                var zipName = $"pit-pdf-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
+                using var ms = new MemoryStream();
+                using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    foreach (var (name, bytes) in payloads)
+                    {
+                        var entry = zip.CreateEntry(name, CompressionLevel.Fastest);
+                        using var entryStream = entry.Open();
+                        await entryStream.WriteAsync(bytes);
+                    }
+                }
+                await JS.InvokeVoidAsync("spcPitDownload",
+                    zipName, Convert.ToBase64String(ms.ToArray()), "application/zip");
+            }
+
+            Snackbar.Add($"{payloads.Count} PDF(s) generated.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"PDF generation failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    // --- Bulk XML downloads: single cert → .xml, multiple → .zip ---
+
+    private async Task DownloadBulkAsync(bool signed)
+    {
+        if (_selected.Count == 0) return;
+        _busy = true;
+        try
+        {
+            var portal = ApplicationContext.GetRequiredService<IDataPortalFactory>().GetPortal<PitCertificate>();
+            var payloads = new List<(string Name, byte[] Bytes)>();
+            var skipped = 0;
+
+            foreach (var row in _selected)
+            {
+                var cert = await portal.FetchAsync(row.PitCertificateId);
+                var bytes = signed ? cert.SignedXml : cert.UnsignedXml;
+                if (bytes is null || bytes.Length == 0) { skipped++; continue; }
+                payloads.Add(($"{cert.ProformaNo}-{(signed ? "signed" : "unsigned")}.xml", bytes));
+            }
+
+            if (payloads.Count == 0)
+            {
+                Snackbar.Add($"No {(signed ? "signed" : "unsigned")} XML on any selected row.", Severity.Warning);
+                return;
+            }
+
+            if (payloads.Count == 1)
+            {
+                var (name, bytes) = payloads[0];
+                await JS.InvokeVoidAsync("spcPitDownload",
+                    name, Convert.ToBase64String(bytes), "application/xml");
+            }
+            else
+            {
+                var zipName = $"pit-{(signed ? "signed" : "unsigned")}-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
+                using var ms = new MemoryStream();
+                using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    foreach (var (name, bytes) in payloads)
+                    {
+                        var entry = zip.CreateEntry(name, CompressionLevel.Fastest);
+                        using var entryStream = entry.Open();
+                        await entryStream.WriteAsync(bytes);
+                    }
+                }
+                await JS.InvokeVoidAsync("spcPitDownload",
+                    zipName, Convert.ToBase64String(ms.ToArray()), "application/zip");
+            }
+
+            if (skipped > 0)
+                Snackbar.Add($"{payloads.Count} downloaded, {skipped} skipped (no XML yet).", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Download failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
