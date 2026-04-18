@@ -22,10 +22,29 @@ public sealed record PitPdfBuildContext(
 /// </summary>
 public sealed class PitPdfBuilder
 {
+    private static readonly object QuestPdfInitLock = new();
+    private static bool _questPdfInitialized;
+
     public byte[] Build(PitPdfBuildContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
+        EnsureQuestPdfInitialized();
         return Document.Create(container => Compose(container, ctx)).GeneratePdf();
+    }
+
+    private static void EnsureQuestPdfInitialized()
+    {
+        if (_questPdfInitialized)
+            return;
+
+        lock (QuestPdfInitLock)
+        {
+            if (_questPdfInitialized)
+                return;
+
+            QuestPDF.Settings.License = LicenseType.Community;
+            _questPdfInitialized = true;
+        }
     }
 
     private static void Compose(IDocumentContainer container, PitPdfBuildContext ctx)

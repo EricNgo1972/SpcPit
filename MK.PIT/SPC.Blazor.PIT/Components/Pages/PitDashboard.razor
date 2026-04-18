@@ -2,13 +2,13 @@
 @inject Csla.ApplicationContext ApplicationContext
 @using SPC.Infrastructure.TvanSubmission
 
-<PageTitle>PIT Dashboard</PageTitle>
+<PageTitle>Tổng quan PIT</PageTitle>
 
 <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2" Class="mb-4">
-    <MudText Typo="Typo.h4">Dashboard</MudText>
+    <MudText Typo="Typo.h4">Tổng quan</MudText>
     <MudChip T="string" Size="Size.Small" Color="@(_provider.IsAvailable ? Color.Primary : Color.Warning)"
              Icon="@Icons.Material.Filled.Cable">
-        Provider: @_provider.DisplayName
+        Nhà cung cấp: @_provider.DisplayName
     </MudChip>
 </MudStack>
 
@@ -44,9 +44,9 @@ else
     <MudDivider Class="my-4" />
 
     <MudStack Row="true" Spacing="2">
-        <MudButton Href="/pit/import" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload">Import Excel</MudButton>
-        <MudButton Href="/pit/certificates" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description">View certificates</MudButton>
-        <MudButton Href="/pit/settings" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Settings">Settings</MudButton>
+        <MudButton Href="/pit/import" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload">Nhập Excel</MudButton>
+        <MudButton Href="/pit/certificates" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description">Xem chứng từ</MudButton>
+        <MudButton Href="/pit/settings" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Settings">Cài đặt</MudButton>
     </MudStack>
 }
 
@@ -95,9 +95,9 @@ else
     private string PrimaryWorkflowTitle =>
         _provider.Code switch
         {
-            TvanProviderCatalog.NoneCode => "Local-only workflow. Submission is disabled in current settings.",
-            _ when _provider.RequiresSignedXml => $"{_provider.DisplayName} workflow: generate XML, sign, submit, wait for tax response.",
-            _ => $"{_provider.DisplayName} workflow: submit directly to the provider, then wait for tax response."
+            TvanProviderCatalog.NoneCode => "Quy trình lưu nội bộ. Chức năng nộp dữ liệu đang bị tắt trong cấu hình hiện tại.",
+            _ when _provider.RequiresSignedXml => $"Quy trình {_provider.DisplayName}: tạo XML, ký số, gửi nộp và chờ phản hồi từ cơ quan thuế.",
+            _ => $"Quy trình {_provider.DisplayName}: gửi thẳng đến nhà cung cấp và chờ phản hồi từ cơ quan thuế."
         };
 
     private IReadOnlyList<DashboardCard> PrimaryWorkflowCards =>
@@ -105,26 +105,26 @@ else
         {
             TvanProviderCatalog.NoneCode =>
             [
-                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote, "Local records not yet submitted anywhere."),
-                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Historical in-flight rows from a previous provider/config."),
-                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Locked rows with mã CQT."),
-                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error, "Rows that failed a prior submission.")
+                new("Nháp", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote, "Dữ liệu mới chỉ được lưu trong hệ thống nội bộ."),
+                new("Đã gửi", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Dữ liệu lịch sử đang xử lý từ cấu hình hoặc nhà cung cấp trước đó."),
+                new("Chấp nhận", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Dòng đã khóa do đã có mã CQT."),
+                new("Từ chối", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error, "Dòng gửi trước đây bị từ chối.")
             ],
             _ when _provider.RequiresSignedXml =>
             [
-                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
-                new("XML Generated", [CertificateStatus.XmlGenerated], Color.Info, Icons.Material.Filled.DataObject),
-                new("Signed", [CertificateStatus.Signed], Color.Warning, Icons.Material.Filled.Fingerprint),
-                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send),
-                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified),
-                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
+                new("Nháp", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
+                new("Đã tạo XML", [CertificateStatus.XmlGenerated], Color.Info, Icons.Material.Filled.DataObject),
+                new("Đã ký", [CertificateStatus.Signed], Color.Warning, Icons.Material.Filled.Fingerprint),
+                new("Đã gửi", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send),
+                new("Chấp nhận", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified),
+                new("Từ chối", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
             ],
             _ =>
             [
-                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
-                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Sent to the provider without local XML signing."),
-                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Tax authority returned mã CQT."),
-                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
+                new("Nháp", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
+                new("Đã gửi", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Đã gửi cho nhà cung cấp mà không cần ký XML tại máy."),
+                new("Chấp nhận", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Cơ quan thuế đã trả về mã CQT."),
+                new("Từ chối", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
             ]
         };
 

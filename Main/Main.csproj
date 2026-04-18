@@ -13,6 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.BO\SPC.BO.csproj" />
     <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL\SPC.DAL.csproj" />
     <ProjectReference Include="..\..\spc-maplekiosk\MapleKiosk\MK.Core\SPC.DAL.SQLite\SPC.DAL.SQLite.csproj" />

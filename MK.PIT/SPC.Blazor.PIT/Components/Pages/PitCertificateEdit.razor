@@ -3,8 +3,8 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
-<PageTitle>Edit PIT Certificate</PageTitle>
-<MudText Typo="Typo.h4" Class="mb-4">Certificate</MudText>
+<PageTitle>Chỉnh sửa chứng từ PIT</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Chứng từ</MudText>
 
 @if (_cert is null)
 {
@@ -17,59 +17,59 @@ else
         @if (readOnly)
         {
             <MudAlert Severity="Severity.Success" Class="mb-3" Icon="@Icons.Material.Filled.Lock">
-                <b>Locked.</b> This certificate has received a mã CQT (@_cert.CqtCode) from the tax authority and can no longer be edited. Only downloads are permitted.
+                <b>Đã khóa.</b> Chứng từ này đã nhận mã CQT (@_cert.CqtCode) từ cơ quan thuế nên không thể chỉnh sửa. Chỉ còn được phép tải xuống.
             </MudAlert>
         }
 
-        <MudText Typo="Typo.h6" Class="mb-3">Tax payer</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Người nộp thuế</MudText>
         <MudGrid>
-            <MudItem xs="12" md="6"><MudTextField Label="Proforma no." @bind-Value="_cert.ProformaNo" ReadOnly="readOnly" Required="true" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="Tax payer code" @bind-Value="_cert.TaxPayerCode" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="MST" @bind-Value="_cert.TaxPayerTaxCode" ReadOnly="readOnly" Required="true" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="Name" @bind-Value="_cert.TaxPayerName" ReadOnly="readOnly" Required="true" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="Nationality" @bind-Value="_cert.Nationality" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="Resident type" @bind-Value="_cert.ResidentType" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="ID no." @bind-Value="_cert.IdentificationNo" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="6"><MudDatePicker Label="Issue date" @bind-Date="_cert.IssueDate" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="6"><MudTextField Label="Phone" @bind-Value="_cert.Phone" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Số chứng từ tạm" @bind-Value="_cert.ProformaNo" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Mã người nộp thuế" @bind-Value="_cert.TaxPayerCode" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Mã số thuế" @bind-Value="_cert.TaxPayerTaxCode" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Họ tên" @bind-Value="_cert.TaxPayerName" ReadOnly="readOnly" Required="true" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Quốc tịch" @bind-Value="_cert.Nationality" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Loại cư trú" @bind-Value="_cert.ResidentType" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Số giấy tờ" @bind-Value="_cert.IdentificationNo" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudDatePicker Label="Ngày cấp" @bind-Date="_cert.IssueDate" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="6"><MudTextField Label="Điện thoại" @bind-Value="_cert.Phone" ReadOnly="readOnly" /></MudItem>
             <MudItem xs="12" md="6"><MudTextField Label="Email" @bind-Value="_cert.Email" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12"><MudTextField Label="Address" @bind-Value="_cert.Address" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12"><MudTextField Label="Địa chỉ" @bind-Value="_cert.Address" ReadOnly="readOnly" /></MudItem>
         </MudGrid>
 
         <MudDivider Class="my-4" />
-        <MudText Typo="Typo.h6" Class="mb-3">Withholding</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Khấu trừ</MudText>
         <MudGrid>
-            <MudItem xs="6" md="3"><MudNumericField T="int" Label="Year" @bind-Value="_cert.IncomePaymentYear" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="From month" @bind-Value="_cert.IncomePaymentMonthFrom" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="To month" @bind-Value="_cert.IncomePaymentMonthTo" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="6" md="3"><MudTextField Label="Income type" @bind-Value="_cert.IncomeType" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="Taxable income" @bind-Value="_cert.TotalTaxableIncome" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="PIT withheld" @bind-Value="_cert.AmountPersonalIncomeTax" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Insurance premiums" @bind-Value="_cert.InsurancePremiums" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Charity donations" @bind-Value="_cert.CharityDonations" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Still receivable" @bind-Value="_cert.IncomeStillReceivable" ReadOnly="readOnly" /></MudItem>
-            <MudItem xs="12"><MudTextField Label="Note" @bind-Value="_cert.Note" ReadOnly="readOnly" Lines="2" /></MudItem>
+            <MudItem xs="6" md="3"><MudNumericField T="int" Label="Năm" @bind-Value="_cert.IncomePaymentYear" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="Từ tháng" @bind-Value="_cert.IncomePaymentMonthFrom" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudNumericField T="int?" Label="Đến tháng" @bind-Value="_cert.IncomePaymentMonthTo" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="6" md="3"><MudTextField Label="Loại thu nhập" @bind-Value="_cert.IncomeType" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="Thu nhập tính thuế" @bind-Value="_cert.TotalTaxableIncome" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal" Label="Thuế TNCN đã khấu trừ" @bind-Value="_cert.AmountPersonalIncomeTax" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Bảo hiểm bắt buộc" @bind-Value="_cert.InsurancePremiums" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Khoản từ thiện" @bind-Value="_cert.CharityDonations" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12" md="4"><MudNumericField T="decimal?" Label="Thu nhập còn phải trả" @bind-Value="_cert.IncomeStillReceivable" ReadOnly="readOnly" /></MudItem>
+            <MudItem xs="12"><MudTextField Label="Ghi chú" @bind-Value="_cert.Note" ReadOnly="readOnly" Lines="2" /></MudItem>
         </MudGrid>
 
         <MudDivider Class="my-4" />
-        <MudText Typo="Typo.h6" Class="mb-3">Lifecycle</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Trạng thái xử lý</MudText>
         <MudStack Row="true">
-            <MudChip T="string" Color="Color.Info">Status: @_cert.Status</MudChip>
+            <MudChip T="string" Color="Color.Info">Trạng thái: @DisplayStatus(_cert.Status)</MudChip>
             @if (!string.IsNullOrEmpty(_cert.MessageId))
             {
-                <MudChip T="string" Color="Color.Default">MessageId: @_cert.MessageId</MudChip>
+                <MudChip T="string" Color="Color.Default">Mã thông điệp: @_cert.MessageId</MudChip>
             }
             @if (!string.IsNullOrEmpty(_cert.CqtCode))
             {
-                <MudChip T="string" Color="Color.Success">CQT: @_cert.CqtCode</MudChip>
+                <MudChip T="string" Color="Color.Success">Mã CQT: @_cert.CqtCode</MudChip>
             }
         </MudStack>
 
         <MudStack Row="true" Class="mt-4">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(readOnly || _saving)">
-                @(_saving ? "Saving..." : "Save")
+                @(_saving ? "Đang lưu..." : "Lưu")
             </MudButton>
-            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/certificates"))">Back</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/certificates"))">Quay lại</MudButton>
         </MudStack>
     </MudPaper>
 }
@@ -93,15 +93,26 @@ else
         {
             _cert.UpdatedAt = DateTime.UtcNow;
             _cert = await _cert.SaveAsync();
-            Snackbar.Add("Saved.", Severity.Success);
+            Snackbar.Add("Đã lưu.", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Lưu thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {
             _saving = false;
         }
     }
+
+    private static string DisplayStatus(string status) => status switch
+    {
+        CertificateStatus.Draft => "Nháp",
+        CertificateStatus.XmlGenerated => "Đã tạo XML",
+        CertificateStatus.Signed => "Đã ký",
+        CertificateStatus.Submitted => "Đã gửi",
+        CertificateStatus.Accepted => "Chấp nhận",
+        CertificateStatus.Rejected => "Từ chối",
+        _ => status
+    };
 }

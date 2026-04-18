@@ -4,16 +4,16 @@
 @inject NavigationManager Navigation
 @inject SPC.Infrastructure.TvanSubmission.Viettel.ViettelTvanSubmissionService ViettelService
 
-<PageTitle>Viettel Service Settings</PageTitle>
+<PageTitle>Cài đặt dịch vụ Viettel</PageTitle>
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
     <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/pit/settings"))" />
-    <MudText Typo="Typo.h4">Viettel Service Settings</MudText>
+    <MudText Typo="Typo.h4">Cài đặt dịch vụ Viettel</MudText>
 </MudStack>
 
 <MudAlert Severity="Severity.Info" Class="mb-4" Icon="@Icons.Material.Filled.Gavel">
-    Connection and product settings for Viettel T-VAN (<b>Chứng từ khấu trừ thuế TNCN</b>, CTS Server flow).
-    Stored locally in this app's database. Values take effect on the next submission — no restart needed.
+    Cấu hình kết nối và thông tin mẫu số cho Viettel T-VAN (<b>Chứng từ khấu trừ thuế TNCN</b>, CTS Server flow).
+    Được lưu nội bộ trong cơ sở dữ liệu của ứng dụng. Giá trị mới sẽ có hiệu lực ở lần gửi tiếp theo, không cần khởi động lại.
 </MudAlert>
 
 @if (_settings is null)
@@ -24,11 +24,11 @@ else
 {
     <MudAlert Severity="@(_settings.IsReadyForSubmission ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-4"
               Icon="@(_settings.IsReadyForSubmission ? Icons.Material.Filled.Verified : Icons.Material.Filled.Warning)">
-        Status:
-        <b>@(_settings.IsReadyForSubmission ? "Ready" : "Not ready")</b>
+        Trạng thái:
+        <b>@(_settings.IsReadyForSubmission ? "Sẵn sàng" : "Chưa sẵn sàng")</b>
         @if (_settings.LastConnectionTestUtc is not null)
         {
-            <span> · Last test: @_settings.LastConnectionTestUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span>
+            <span> · Lần kiểm tra cuối: @_settings.LastConnectionTestUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span>
         }
         @if (!string.IsNullOrWhiteSpace(_settings.LastConnectionTestMessage))
         {
@@ -36,7 +36,7 @@ else
         }
         @if (!_settings.IsReadyForSubmission && !string.IsNullOrWhiteSpace(_settings.LastTestedConfigHash))
         {
-            <div>Saved settings changed after the last successful test. Run Test Connection again.</div>
+            <div>Cấu hình đã thay đổi sau lần kiểm tra thành công cuối cùng. Hãy chạy Kiểm tra kết nối lại.</div>
         }
     </MudAlert>
 
@@ -45,88 +45,88 @@ else
         <MudGrid>
             <MudItem xs="12">
                 <MudTextField Label="Base URL" @bind-Value="_settings.BaseUrl" Required="true"
-                              HelperText="Production: https://api-sinvoice.viettel.vn · Test: Viettel-issued sandbox URL" />
+                              HelperText="Moi truong that: https://api-sinvoice.viettel.vn · Moi truong test: URL sandbox do Viettel cap" />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Login path" @bind-Value="_settings.LoginPath"
-                              HelperText="Default: /auth/login" />
+                <MudTextField Label="Đường dẫn đăng nhập" @bind-Value="_settings.LoginPath"
+                              HelperText="Mặc định: /auth/login" />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Submit path" @bind-Value="_settings.SubmitPath"
-                              HelperText="Use {mst} as the supplier-tax-code placeholder." />
+                <MudTextField Label="Đường dẫn gửi chứng từ" @bind-Value="_settings.SubmitPath"
+                              HelperText="Dùng {mst} làm chỗ đặt cho mã số thuế đơn vị." />
             </MudItem>
         </MudGrid>
 
         <MudDivider Class="my-4" />
 
-        <MudText Typo="Typo.h6" Class="mb-3">Credentials</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Thông tin đăng nhập</MudText>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Username" @bind-Value="_settings.Username" Required="true"
-                              HelperText="Viettel-issued account (often MST-suffix, e.g. 0100109106-712)" />
+                <MudTextField Label="Tên đăng nhập" @bind-Value="_settings.Username" Required="true"
+                              HelperText="Tài khoản do Viettel cấp, thường có dạng MST-hậu tố, ví dụ 0100109106-712" />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Password" @bind-Value="_settings.Password" Required="true"
+                <MudTextField Label="Mật khẩu" @bind-Value="_settings.Password" Required="true"
                               InputType="@(_showPassword ? InputType.Text : InputType.Password)"
                               Adornment="Adornment.End"
                               AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
                               OnAdornmentClick="@(() => _showPassword = !_showPassword)" />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Supplier tax code (MST)" @bind-Value="_settings.SupplierTaxCode" Required="true"
-                              HelperText="Replaces {mst} in the Submit path." />
+                <MudTextField Label="Mã số thuế đơn vị" @bind-Value="_settings.SupplierTaxCode" Required="true"
+                              HelperText="Sẽ thay thế cho {mst} trong đường dẫn gửi chứng từ." />
             </MudItem>
         </MudGrid>
 
         <MudDivider Class="my-4" />
 
-        <MudText Typo="Typo.h6" Class="mb-3">Certificate product</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Thông tin chứng từ</MudText>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Invoice series (ký hiệu)" @bind-Value="_settings.InvoiceSeries" Required="true"
-                              HelperText="Must match a series registered on Viettel's portal (e.g. CT/25E)." />
+                <MudTextField Label="Ký hiệu chứng từ" @bind-Value="_settings.InvoiceSeries" Required="true"
+                              HelperText="Phải trùng với ký hiệu đã đăng ký trên cổng Viettel, ví dụ CT/25E." />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Invoice type" @bind-Value="_settings.InvoiceType"
-                              HelperText="Fixed at 03/TNCN for PIT withholding certificates." />
+                <MudTextField Label="Loại chứng từ" @bind-Value="_settings.InvoiceType"
+                              HelperText="Cố định là 03/TNCN đối với chứng từ khấu trừ thuế TNCN." />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Template code" @bind-Value="_settings.TemplateCode"
-                              HelperText="Fixed at 03/TNCN for PIT withholding certificates." />
+                <MudTextField Label="Mã mẫu" @bind-Value="_settings.TemplateCode"
+                              HelperText="Cố định là 03/TNCN đối với chứng từ khấu trừ thuế TNCN." />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="Currency code" @bind-Value="_settings.CurrencyCode" />
+                <MudTextField Label="Mã tiền tệ" @bind-Value="_settings.CurrencyCode" />
             </MudItem>
         </MudGrid>
 
         <MudDivider Class="my-4" />
 
-        <MudText Typo="Typo.h6" Class="mb-3">Tuning</MudText>
+        <MudText Typo="Typo.h6" Class="mb-3">Tham số kỹ thuật</MudText>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudNumericField T="int" Label="Token refresh skew (seconds)" @bind-Value="_settings.TokenRefreshSkewSeconds"
-                                 HelperText="Refresh the cached access_token this many seconds before expiry." />
+                <MudNumericField T="int" Label="Số giây làm mới token sớm" @bind-Value="_settings.TokenRefreshSkewSeconds"
+                                 HelperText="Làm mới access_token trong bộ nhớ đệm sớm hơn từng này giây trước khi hết hạn." />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudNumericField T="int" Label="Request timeout (seconds)" @bind-Value="_settings.TimeoutSeconds" />
+                <MudNumericField T="int" Label="Timeout yêu cầu (giây)" @bind-Value="_settings.TimeoutSeconds" />
             </MudItem>
         </MudGrid>
 
         <MudStack Row="true" Class="mt-4" Spacing="2">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving">
-                @(_saving ? "Saving..." : "Save")
+                @(_saving ? "Đang lưu..." : "Lưu")
             </MudButton>
             <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="TestConnectionAsync" Disabled="@(_saving || _testing)">
-                @(_testing ? "Testing..." : "Test Connection")
+                @(_testing ? "Đang kiểm tra..." : "Kiểm tra kết nối")
             </MudButton>
-            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/settings"))">Back to PIT Settings</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/settings"))">Quay lại cài đặt PIT</MudButton>
         </MudStack>
     </MudPaper>
 
     <MudAlert Severity="Severity.Success" Class="mt-4" Icon="@Icons.Material.Filled.Lock">
-        The password is encrypted before it is written to the database using ASP.NET Core Data Protection.
-        The encryption keys live in <code>{ContentRoot}/keys</code> — back that folder up together with
-        <code>spc-pit.db</code>, or the stored password will become unrecoverable and will need to be re-entered.
+        Mật khẩu sẽ được mã hóa trước khi ghi vào cơ sở dữ liệu bằng ASP.NET Core Data Protection.
+        Khóa mã hóa nằm trong <code>{ContentRoot}/keys</code> - hãy sao lưu thư mục này cùng với
+        <code>spc-pit.db</code>, nếu không mật khẩu đã lưu sẽ không thể giải mã và phải nhập lại.
     </MudAlert>
 }
 
@@ -148,11 +148,11 @@ else
         try
         {
             _settings = await _settings.SaveAsync();
-            Snackbar.Add("Viettel settings saved. Applies to the next submission.", Severity.Success);
+            Snackbar.Add("Đã lưu cài đặt Viettel. Sẽ áp dụng ở lần gửi nộp tiếp theo.", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Lưu thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -176,13 +176,13 @@ else
 
             Snackbar.Add(
                 result.Success
-                    ? "Viettel connection test passed. Provider marked Ready."
-                    : $"Viettel connection test failed: {result.Message}",
+                    ? "Kiểm tra kết nối Viettel thành công. Nhà cung cấp đã được đánh dấu Sẵn sàng."
+                    : $"Kiểm tra kết nối Viettel thất bại: {result.Message}",
                 result.Success ? Severity.Success : Severity.Error);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Connection test failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Kiểm tra kết nối thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {

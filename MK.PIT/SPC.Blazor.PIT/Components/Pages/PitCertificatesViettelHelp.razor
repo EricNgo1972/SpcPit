@@ -1,40 +1,40 @@
 <div>
     <MudText Typo="Typo.body2" Class="mb-3">
-        Viettel T-VAN accepts the certificate as <b>structured JSON</b> at
-        <code>/api/InvoiceAPI/InvoiceWS/createTaxDeductionCertificate/{supplierTaxCode}</code>. Viettel signs
-        (CTS Server) and forwards to the tax authority internally. Our app never sends the QĐ 1306 XML over
-        the wire — it's built locally only for optional audit / archival.
+        Viettel T-VAN nhận chứng từ dưới dạng <b>JSON có cấu trúc</b> tại
+        <code>/api/InvoiceAPI/InvoiceWS/createTaxDeductionCertificate/{supplierTaxCode}</code>. Viettel tự ký
+        (CTS Server) và chuyển tiếp đến cơ quan thuế. Ứng dụng không gửi XML QĐ 1306 qua đường truyền;
+        XML chỉ được tạo nội bộ cho mục đích đối chiếu và lưu trữ.
     </MudText>
 
     <MudGrid>
         <MudItem xs="12" md="7">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">What we send</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Dữ liệu gửi đi</MudText>
             <MudList T="string" Dense="true" DisablePadding="true">
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Segment">
-                    <MudText Typo="Typo.body2"><b>generalInvoiceInfo</b> — envelope (series, type, date, adjustmentType, replacement refs)</MudText>
+                    <MudText Typo="Typo.body2"><b>generalInvoiceInfo</b> — thông tin bao gói (ký hiệu, loại, ngày, loại điều chỉnh, tham chiếu thay thế)</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Person">
-                    <MudText Typo="Typo.body2"><b>taxPayerInfo</b> — staff identification (name, MST, residence, ID, contact)</MudText>
+                    <MudText Typo="Typo.body2"><b>taxPayerInfo</b> — thông tin người nộp thuế (tên, MST, cư trú, giấy tờ, liên hệ)</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
-                    <MudText Typo="Typo.body2"><b>incomeInfo</b> — period, taxable income, deductions, PIT withheld</MudText>
+                    <MudText Typo="Typo.body2"><b>incomeInfo</b> — kỳ tính thuế, thu nhập tính thuế, giảm trừ, thuế TNCN đã khấu trừ</MudText>
                 </MudListItem>
             </MudList>
         </MudItem>
         <MudItem xs="12" md="5">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">What we get back</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Dữ liệu nhận về</MudText>
             <MudList T="string" Dense="true" DisablePadding="true">
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Receipt">
                     <MudText Typo="Typo.body2"><b>invoiceNo</b> — e.g. <code>CT/25E113</code></MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Tag">
-                    <MudText Typo="Typo.body2"><b>transactionID</b> — Viettel trace id</MudText>
+                    <MudText Typo="Typo.body2"><b>transactionID</b> — mã giao dịch theo dõi của Viettel</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.VpnKey">
-                    <MudText Typo="Typo.body2"><b>reservationCode</b> — mã bí mật for lookup</MudText>
+                    <MudText Typo="Typo.body2"><b>reservationCode</b> — mã bí mật để tra cứu</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Verified">
-                    <MudText Typo="Typo.body2"><b>codeOfTax</b> — real mã CQT (often async; we fall back to reservationCode until it arrives)</MudText>
+                    <MudText Typo="Typo.body2"><b>codeOfTax</b> — mã CQT thực (thường trả về bất đồng bộ; tạm thời dùng reservationCode nếu chưa có)</MudText>
                 </MudListItem>
             </MudList>
         </MudItem>
@@ -42,27 +42,27 @@
 
     <MudDivider Class="my-3" />
 
-    <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle with Viettel</MudText>
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Quy trình với Viettel</MudText>
     <MudText Typo="Typo.body2" Class="mb-2">
-        <code>Draft</code> → <i>Submit</i> → <code>Submitted</code> →
-        <code>Accepted</code> (locked, downloads only) or <code>Rejected</code>.
-        No local Generate XML / Sign step in the submission path.
+        <code>Nháp</code> → <i>Gửi nộp</i> → <code>Đã gửi</code> →
+        <code>Chấp nhận</code> (đã khóa, chỉ được tải xuống) hoặc <code>Từ chối</code>.
+        Không có bước Tạo XML / Ký số trong quy trình gửi nộp chính.
     </MudText>
 
     <MudStack Row="true" Spacing="2" Class="mt-3">
         <MudButton Href="/pit/settings/viettel" Variant="Variant.Outlined" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Settings">
-            Viettel Service Settings
+            Cài đặt dịch vụ Viettel
         </MudButton>
         <MudButton Href="docs/Viettel.md" Target="_blank" Variant="Variant.Text"
                    StartIcon="@Icons.Material.Filled.MenuBook">
-            Full integration doc
+            Tài liệu tích hợp đầy đủ
         </MudButton>
     </MudStack>
 
     <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
-        Before going live: register the <b>invoice series</b> (e.g. <code>CT/25E</code>) on Viettel's portal,
-        fill in credentials + SupplierTaxCode in the Viettel Service Settings page, and verify a single cert
-        submits end-to-end on Viettel's test environment.
+        Trước khi vận hành thật: đăng ký <b>ký hiệu chứng từ</b> (ví dụ <code>CT/25E</code>) trên cổng Viettel,
+        khai báo thông tin đăng nhập và SupplierTaxCode trong trang Cài đặt dịch vụ Viettel, sau đó kiểm tra
+        gửi thử một chứng từ trên môi trường test của Viettel.
     </MudAlert>
 </div>

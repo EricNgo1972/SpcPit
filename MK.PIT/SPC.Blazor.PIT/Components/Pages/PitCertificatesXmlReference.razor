@@ -2,13 +2,13 @@
 
 <div>
     <MudText Typo="Typo.body2" Class="mb-3">
-        Each PIT withholding certificate is emitted as a UTF-8 XML document following the General Department of
-        Taxation's technical specification <b>Quyết định 1306/QĐ-TCT (13/06/2025)</b>.
+        Mỗi chứng từ khấu trừ thuế TNCN được tạo thành tệp XML UTF-8 theo đặc tả kỹ thuật của Tổng cục Thuế
+        tại <b>Quyết định 1306/QĐ-TCT (13/06/2025)</b>.
     </MudText>
 
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Envelope structure (§II)</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Cấu trúc bao gói (§II)</MudText>
             <MudPaper Class="pa-3" Style="font-family: var(--mud-typography-body1-family, monospace); font-size: 0.8rem; white-space: pre; overflow-x: auto;" Elevation="0">
 @($@"<{PitXmlSchema.TDiep}>
   <{PitXmlSchema.TTChung}>            Message header
@@ -32,7 +32,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="6">
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Format rules (§I)</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Quy tắc định dạng (§I)</MudText>
             <MudList T="string" Dense="true" DisablePadding="true">
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Code">
                     <MudText Typo="Typo.body2">UTF-8, no BOM, <code>TCVN 6909:2001</code>.</MudText>
@@ -41,23 +41,23 @@
                     <MudText Typo="Typo.body2"><code>yyyy-MM-dd</code> / <code>yyyy-MM-ddTHH:mm:ss</code> GMT+7.</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
-                    <MudText Typo="Typo.body2">Amounts: ≤ 21 digits, ≤ 6 dp, invariant culture.</MudText>
+                    <MudText Typo="Typo.body2">Số tiền: tối đa 21 chữ số, tối đa 6 chữ số thập phân, dùng invariant culture.</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.DataUsage">
-                    <MudText Typo="Typo.body2">Single message ≤ <b>2 MB</b>. One cert per document.</MudText>
+                    <MudText Typo="Typo.body2">Mỗi thông điệp &lt;= <b>2 MB</b>. Mỗi tệp chỉ chứa một chứng từ.</MudText>
                 </MudListItem>
                 <MudListItem T="string" Icon="@Icons.Material.Filled.Fingerprint">
-                    <MudText Typo="Typo.body2">W3C XML Digital Signature; LocalAgent fills the empty placeholder.</MudText>
+                    <MudText Typo="Typo.body2">Chữ ký số W3C XML Digital Signature; LocalAgent sẽ điền vào thẻ placeholder rỗng.</MudText>
                 </MudListItem>
             </MudList>
         </MudItem>
 
         <MudItem xs="12">
             <MudDivider Class="my-2" />
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Field → XML mapping</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Ánh xạ trường -> XML</MudText>
             <MudSimpleTable Dense="true" Hover="true" Bordered="true">
                 <thead>
-                    <tr><th>Group</th><th>Certificate field</th><th>XML element</th><th>Source</th></tr>
+                    <tr><th>Nhóm</th><th>Trường chứng từ</th><th>Phần tử XML</th><th>Nguồn</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var row in _mappingTable)
@@ -75,14 +75,14 @@
 
         <MudItem xs="12">
             <MudDivider Class="my-2" />
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Quy trình</MudText>
             <MudText Typo="Typo.body2" Class="mb-2">
-                <code>Draft</code> → <code>XmlGenerated</code> → <code>Signed</code> →
-                <code>Submitted</code> → <code>Accepted</code> (locked) or <code>Rejected</code>.
+                <code>Nháp</code> → <code>Đã tạo XML</code> → <code>Đã ký</code> →
+                <code>Đã gửi</code> → <code>Chấp nhận</code> (đã khóa) hoặc <code>Từ chối</code>.
             </MudText>
             <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
-                TBD from QĐ 1306 Phụ lục: the exact <code>MLTDiep</code> code for "Chứng từ khấu trừ thuế TNCN"
-                and the precise <code>DLCT</code> child element names. Edits localized to
+                Cần đối chiếu thêm với phụ lục QĐ 1306: mã <code>MLTDiep</code> chính xác cho "Chứng từ khấu trừ thuế TNCN"
+                và tên các phần tử con <code>DLCT</code>. Nếu cần sửa, thay đổi sẽ được gom trong
                 <code>PitXmlSchema.cs</code>.
             </MudAlert>
         </MudItem>

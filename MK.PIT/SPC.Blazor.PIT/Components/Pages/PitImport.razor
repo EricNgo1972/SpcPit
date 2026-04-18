@@ -4,66 +4,66 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
-<PageTitle>Import PIT Excel</PageTitle>
-<MudText Typo="Typo.h4" Class="mb-4">Import staff from Excel</MudText>
+<PageTitle>Nhập Excel PIT</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">Nhập nhân viên từ Excel</MudText>
 
 <MudExpansionPanels Elevation="0" Class="mb-4">
-    <MudExpansionPanel Text="File requirements" Icon="@Icons.Material.Filled.Info">
+    <MudExpansionPanel Text="Yêu cầu tệp" Icon="@Icons.Material.Filled.Info">
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">File &amp; sheet</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Tệp và worksheet</MudText>
                 <MudList T="string" Dense="true" DisablePadding="true">
                     <MudListItem T="string" Icon="@Icons.Material.Filled.InsertDriveFile">
-                        <MudText Typo="Typo.body2"><b>.xlsx</b> format, max <b>10 MB</b></MudText>
+                        <MudText Typo="Typo.body2">Định dạng <b>.xlsx</b>, tối đa <b>10 MB</b></MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.TableChart">
-                        <MudText Typo="Typo.body2">Sheet named exactly <code>Import form</code></MudText>
+                        <MudText Typo="Typo.body2">Tên sheet phải đúng chính xác là <code>Import form</code></MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.TableRows">
-                        <MudText Typo="Typo.body2">Row 5 = canonical system field names (header). Rows 1–4 are free for human labels.</MudText>
+                        <MudText Typo="Typo.body2">Dòng 5 = tên trường chuẩn của hệ thống. Dòng 1-4 có thể dùng cho tiêu đề hiển thị.</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.Numbers">
-                        <MudText Typo="Typo.body2">Row 6+ = staff records. Blank rows are skipped.</MudText>
+                        <MudText Typo="Typo.body2">Từ dòng 6 trở đi = dữ liệu nhân viên. Dòng trống sẽ được bỏ qua.</MudText>
                     </MudListItem>
                 </MudList>
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Required headers (row 5)</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Cột bắt buộc (dòng 5)</MudText>
                 <div>
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">ProformaNo</MudChip>
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">TaxPayerTaxCode</MudChip>
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">TaxPayerName</MudChip>
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">IncomePaymentYear</MudChip>
                 </div>
-                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Optional headers</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-2">Cột tùy chọn</MudText>
                 <div>
                     @foreach (var opt in _optionalHeaders)
                     {
                         <MudChip T="string" Size="Size.Small" Color="Color.Default">@opt</MudChip>
                     }
                 </div>
-                <MudText Typo="Typo.caption" Class="mt-2 d-block">Unknown headers are ignored.</MudText>
+                <MudText Typo="Typo.caption" Class="mt-2 d-block">Các cột không xác định sẽ bị bỏ qua.</MudText>
             </MudItem>
 
             <MudItem xs="12">
                 <MudDivider Class="my-2" />
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Per-row rules</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Quy tắc trên từng dòng</MudText>
                 <MudList T="string" Dense="true" DisablePadding="true">
                     <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
-                        <MudText Typo="Typo.body2"><code>TaxPayerTaxCode</code> must be <b>exactly 10 or 13 digits</b> (digits only).</MudText>
+                        <MudText Typo="Typo.body2"><code>TaxPayerTaxCode</code> phải có <b>đúng 10 hoặc 13 chữ số</b> (chỉ gồm số).</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
-                        <MudText Typo="Typo.body2"><code>IncomePaymentMonthFrom</code> ≤ <code>IncomePaymentMonthTo</code> when both are set.</MudText>
+                        <MudText Typo="Typo.body2"><code>IncomePaymentMonthFrom</code> phải &lt;= <code>IncomePaymentMonthTo</code> nếu cả hai đều có giá trị.</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
-                        <MudText Typo="Typo.body2">Amounts: invariant culture, no thousands separators (Excel numeric cells are fine).</MudText>
+                        <MudText Typo="Typo.body2">Số tiền: dùng định dạng số chuẩn, không có dấu phân cách hàng nghìn (ô số của Excel vẫn hợp lệ).</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircleOutline">
-                        <MudText Typo="Typo.body2">Dates: Excel date cells preferred (any parseable ISO/locale string also accepted).</MudText>
+                        <MudText Typo="Typo.body2">Ngày tháng: ưu tiên ô ngày của Excel (chuỗi ISO hoặc chuỗi hợp lệ vẫn được chấp nhận).</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.SwapHoriz">
-                        <MudText Typo="Typo.body2">Replacement certificate: populate <code>RelatedProformaNo</code> (+ optionally <code>RelatedFormNo</code>).</MudText>
+                        <MudText Typo="Typo.body2">Chứng từ thay thế: điền <code>RelatedProformaNo</code> (và có thể thêm <code>RelatedFormNo</code>).</MudText>
                     </MudListItem>
                 </MudList>
             </MudItem>
@@ -73,12 +73,12 @@
                     <MudButton Href="samples/epit-sample-valid.xlsx" Target="_blank"
                                Variant="Variant.Outlined" Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Download">
-                        Download sample (valid)
+                        Tải tệp mẫu hợp lệ
                     </MudButton>
                     <MudButton Href="samples/epit-sample-with-errors.xlsx" Target="_blank"
                                Variant="Variant.Outlined"
                                StartIcon="@Icons.Material.Filled.Download">
-                        Sample with errors (for reference)
+                        Tệp mẫu có lỗi
                     </MudButton>
                 </MudStack>
             </MudItem>
@@ -90,7 +90,7 @@
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
         <InputFile id="xlsxInput" OnChange="OnInputFileChange" accept=".xlsx" hidden />
         <MudButton HtmlTag="label" for="xlsxInput" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload">
-            Choose .xlsx file
+            Chọn tệp .xlsx
         </MudButton>
         @if (_fileName is not null)
         {
@@ -102,14 +102,14 @@
 @if (_result is not null)
 {
     <MudAlert Severity="@(_result.HasErrors ? Severity.Error : Severity.Success)" Class="mb-3">
-        Parsed @_result.Rows.Count rows. Errors: @_result.ErrorCount. Warnings: @_result.WarningCount.
+        Đã đọc @_result.Rows.Count dòng. Lỗi: @_result.ErrorCount. Cảnh báo: @_result.WarningCount.
     </MudAlert>
 
     @if (_result.Diagnostics.Count > 0)
     {
-        <MudText Typo="Typo.h6" Class="mb-2">Diagnostics</MudText>
+        <MudText Typo="Typo.h6" Class="mb-2">Chẩn đoán</MudText>
         <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
-            <thead><tr><th>Cell</th><th>Row</th><th>Column</th><th>Field</th><th>Severity</th><th>Message</th></tr></thead>
+            <thead><tr><th>Ô</th><th>Dòng</th><th>Cột</th><th>Trường</th><th>Mức độ</th><th>Thông báo</th></tr></thead>
             <tbody>
             @foreach (var d in _result.Diagnostics)
             {
@@ -130,9 +130,9 @@
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    Disabled="@(_result.HasErrors || _committing)"
                    OnClick="CommitAsync">
-            @(_committing ? "Importing..." : $"Import {_result.Rows.Count} rows")
+            @(_committing ? "Đang nhập..." : $"Nhập {_result.Rows.Count} dòng")
         </MudButton>
-        <MudButton Variant="Variant.Outlined" OnClick="Reset">Clear</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Reset">Xóa</MudButton>
     </MudStack>
 }
 
@@ -173,12 +173,12 @@
         try
         {
             var n = await Importer.CommitAsync(ApplicationContext, _result.Rows);
-            Snackbar.Add($"Imported {n} certificates.", Severity.Success);
+            Snackbar.Add($"Đã nhập {n} chứng từ.", Severity.Success);
             Navigation.NavigateTo("/pit/certificates");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Import failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Nhập thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {

@@ -12,6 +12,10 @@ using Main.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// When launching Main.exe directly from bin/Debug, explicitly load the static-web-assets
+// manifest so package/RCL assets (e.g. MudBlazor) still resolve.
+builder.WebHost.UseStaticWebAssets();
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

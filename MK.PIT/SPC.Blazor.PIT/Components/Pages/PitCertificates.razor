@@ -1,5 +1,7 @@
 @page "/pit/certificates"
 @using System.IO.Compression
+@using System.Globalization
+@using System.Text
 @using SPC.BO.PIT.Pdf
 @using SPC.Infrastructure.TvanSubmission
 @inject Csla.ApplicationContext ApplicationContext
@@ -10,24 +12,24 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 
-<PageTitle>PIT Certificates</PageTitle>
+<PageTitle>Chứng từ PIT</PageTitle>
 <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2" Class="mb-4">
-    <MudText Typo="Typo.h4">Certificates</MudText>
+    <MudText Typo="Typo.h4">Chứng từ</MudText>
     <MudChip T="string" Size="Size.Small" Color="@(_provider.IsAvailable ? Color.Primary : Color.Warning)"
              Icon="@Icons.Material.Filled.Cable">
-        Provider: @_provider.DisplayName
+        Nhà cung cấp: @_provider.DisplayName
     </MudChip>
     @if (_provider.Code == TvanProviderCatalog.ViettelCode)
     {
         <MudChip T="string" Size="Size.Small" Color="@(_providerReady ? Color.Success : Color.Warning)"
                  Variant="Variant.Outlined" Icon="@Icons.Material.Filled.VerifiedUser">
-            @(_providerReady ? "Ready" : "Not ready")
+            @(_providerReady ? "Sẵn sàng" : "Chưa sẵn sàng")
         </MudChip>
     }
     @if (!_provider.IsAvailable && _provider.Code != TvanProviderCatalog.NoneCode)
     {
         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
-            not implemented — Submit will fail
+            chưa hỗ trợ - gửi nộp sẽ thất bại
         </MudChip>
     }
 </MudStack>
@@ -67,14 +69,14 @@
 <MudPaper Class="pa-3 mb-3" Elevation="1">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
         <MudText Typo="Typo.subtitle2">
-            @_selected.Count selected
+            Đã chọn @_selected.Count
         </MudText>
 
         <MudButton Variant="Variant.Outlined" Color="Color.Default"
                    StartIcon="@Icons.Material.Filled.Edit"
                    Disabled="@(_selected.Count != 1 || _busy)"
                    OnClick="OpenSelected">
-            Open
+            Mở
         </MudButton>
 
         @if (_provider.RequiresSignedXml)
@@ -85,14 +87,14 @@
                        StartIcon="@Icons.Material.Filled.Build"
                        Disabled="@(!_selected.Any() || _busy)"
                        OnClick="GenerateBulkAsync">
-                Generate XML
+                Tạo XML
             </MudButton>
 
             <MudButton Variant="Variant.Filled" Color="Color.Warning"
                        StartIcon="@Icons.Material.Filled.Fingerprint"
                        Disabled="@(!_selected.Any() || _busy)"
                        OnClick="SignBulkAsync">
-                Sign
+                Ký số
             </MudButton>
         }
 
@@ -104,7 +106,7 @@
                        StartIcon="@Icons.Material.Filled.Send"
                        Disabled="@(!_selected.Any() || _busy || !_providerReady)"
                        OnClick="SubmitBulkAsync">
-                Submit via @_provider.DisplayName
+                Gửi nộp qua @_provider.DisplayName
             </MudButton>
         }
 
@@ -114,7 +116,7 @@
                    StartIcon="@Icons.Material.Filled.PictureAsPdf"
                    Disabled="@(!_selected.Any() || _busy)"
                    OnClick="GeneratePdfBulkAsync">
-            Download PDF
+            Tải PDF
         </MudButton>
 
         @if (_provider.RequiresSignedXml)
@@ -123,14 +125,14 @@
                        StartIcon="@Icons.Material.Filled.Download"
                        Disabled="@(!_selected.Any() || _busy)"
                        OnClick="@(() => DownloadBulkAsync(signed: false))">
-                Download Unsigned XML
+                Tải XML chưa ký
             </MudButton>
 
             <MudButton Variant="Variant.Outlined"
                        StartIcon="@Icons.Material.Filled.Download"
                        Disabled="@(!_selected.Any() || _busy)"
                        OnClick="@(() => DownloadBulkAsync(signed: true))">
-                Download Signed XML
+                Tải XML đã ký
             </MudButton>
         }
 
@@ -142,14 +144,14 @@
 </MudPaper>
 
 <MudStack Row="true" Class="mb-3" Spacing="2">
-    <MudSelect T="string" Label="Status" @bind-Value="_statusFilter" Clearable="true" Dense="true">
+    <MudSelect T="string" Label="Trạng thái" @bind-Value="_statusFilter" Clearable="true" Dense="true">
         @foreach (var s in CertificateStatus.All)
         {
-            <MudSelectItem T="string" Value="@s">@s</MudSelectItem>
+            <MudSelectItem T="string" Value="@s">@DisplayStatus(s)</MudSelectItem>
         }
     </MudSelect>
-    <MudTextField T="int?" Label="Year" @bind-Value="_yearFilter" />
-    <MudTextField T="string" Label="Search name/MST" @bind-Value="_search" />
+    <MudTextField T="int?" Label="Năm" @bind-Value="_yearFilter" />
+    <MudTextField T="string" Label="Tìm tên/MST" @bind-Value="_search" />
 </MudStack>
 
 @if (_certs is null)
@@ -162,12 +164,12 @@ else
               MultiSelection="true" @bind-SelectedItems="_selected">
         <HeaderContent>
             <MudTh>ProformaNo</MudTh>
-            <MudTh>Name</MudTh>
-            <MudTh>Tax code</MudTh>
-            <MudTh>Year</MudTh>
-            <MudTh>Taxable</MudTh>
-            <MudTh>Withheld</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh>Họ tên</MudTh>
+            <MudTh>Mã số thuế</MudTh>
+            <MudTh>Năm</MudTh>
+            <MudTh>Thu nhập tính thuế</MudTh>
+            <MudTh>Đã khấu trừ</MudTh>
+            <MudTh>Trạng thái</MudTh>
             <MudTh>Mã CQT</MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -178,10 +180,10 @@ else
             <MudTd>@context.TotalTaxableIncome.ToString("N0")</MudTd>
             <MudTd>@context.AmountPersonalIncomeTax.ToString("N0")</MudTd>
             <MudTd>
-                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@context.Status</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="@StatusColor(context.Status)">@DisplayStatus(context.Status)</MudChip>
                 @if (IsLocked(context))
                 {
-                    <MudTooltip Text="Locked: mã CQT issued by tax authority. Downloads only.">
+                    <MudTooltip Text="Đã khóa: cơ quan thuế đã cấp mã CQT. Chỉ được tải xuống.">
                         <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Success" Class="ml-1" />
                     </MudTooltip>
                 }
@@ -272,8 +274,8 @@ else
         await RunBulkAsync(
             eligible: CanGenerate,
             action: id => PitXmlCommand.GenerateUnsignedAsync(ApplicationContext, id),
-            verb: "Generate XML",
-            skipReason: "locked (has mã CQT)");
+            verb: "Tạo XML",
+            skipReason: "đã khóa (đã có mã CQT)");
     }
 
     private async Task SignBulkAsync()
@@ -287,15 +289,15 @@ else
                 var signed = await SigningService.SignAsync(cert.UnsignedXml ?? []);
                 await PitXmlCommand.MarkSignedAsync(ApplicationContext, id, signed);
             },
-            verb: "Sign",
-            skipReason: "locked, already signed, or no XML generated yet");
+            verb: "Ký số",
+            skipReason: "đã khóa, đã ký hoặc chưa tạo XML");
     }
 
     private async Task SubmitBulkAsync()
     {
         if (!_providerReady)
         {
-            Snackbar.Add("Current provider is not ready for submission. Complete the provider setup first.", Severity.Warning);
+            Snackbar.Add("Nhà cung cấp hiện tại chưa sẵn sàng để gửi nộp. Hãy hoàn tất cấu hình trước.", Severity.Warning);
             return;
         }
 
@@ -321,10 +323,10 @@ else
                         response.CqtCode ?? response.InvoiceNo ?? "");
                 else
                     await PitXmlCommand.MarkRejectedAsync(ApplicationContext, id,
-                        response.RejectReason ?? "Rejected");
+                        response.RejectReason ?? "Từ chối");
             },
-            verb: "Submit",
-            skipReason: "locked or already submitted");
+            verb: "Gửi nộp",
+            skipReason: "đã khóa hoặc đã gửi");
     }
 
     /// <summary>
@@ -365,17 +367,17 @@ else
         _busy = false;
 
         var parts = new List<string>();
-        parts.Add($"{done} {verb.ToLowerInvariant()}d");
-        if (skipped > 0) parts.Add($"{skipped} skipped ({skipReason})");
-        if (failed > 0)  parts.Add($"{failed} failed");
-        var message = string.Join(", ", parts) + ".";
+        parts.Add($"{done} xong");
+        if (skipped > 0) parts.Add($"{skipped} bỏ qua ({skipReason})");
+        if (failed > 0)  parts.Add($"{failed} thất bại");
+        var message = $"{verb}: " + string.Join(", ", parts) + ".";
 
         var severity = failed > 0 ? Severity.Error
                      : done == 0 ? Severity.Info
                      : Severity.Success;
 
         if (failed > 0 && lastError is not null)
-            message += $" Last error: {lastError}";
+            message += $" Lỗi cuối: {lastError}";
 
         Snackbar.Add(message, severity);
         await ReloadAsync();
@@ -406,7 +408,7 @@ else
                     Series: null,
                     IssuedOn: null);
                 var bytes = PdfBuilder.Build(ctx);
-                payloads.Add(($"CTKT-{cert.ProformaNo}.pdf", bytes));
+                payloads.Add((BuildPdfFileName(cert), bytes));
             }
 
             if (payloads.Count == 1)
@@ -432,11 +434,11 @@ else
                     zipName, Convert.ToBase64String(ms.ToArray()), "application/zip");
             }
 
-            Snackbar.Add($"{payloads.Count} PDF(s) generated.", Severity.Success);
+            Snackbar.Add($"Đã tạo {payloads.Count} tệp PDF.", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"PDF generation failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Tạo PDF thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -466,7 +468,7 @@ else
 
             if (payloads.Count == 0)
             {
-                Snackbar.Add($"No {(signed ? "signed" : "unsigned")} XML on any selected row.", Severity.Warning);
+                Snackbar.Add($"Không có XML {(signed ? "đã ký" : "chưa ký")} trong các dòng đã chọn.", Severity.Warning);
                 return;
             }
 
@@ -494,11 +496,11 @@ else
             }
 
             if (skipped > 0)
-                Snackbar.Add($"{payloads.Count} downloaded, {skipped} skipped (no XML yet).", Severity.Info);
+                Snackbar.Add($"Đã tải {payloads.Count} tệp, bỏ qua {skipped} dòng (chưa có XML).", Severity.Info);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Download failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Tải xuống thất bại: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -510,8 +512,8 @@ else
 
     private string HelpPanelTitle =>
         _provider.Code == TvanProviderCatalog.NoneCode
-            ? "No T-VAN provider selected"
-            : $"How submission works with {_provider.DisplayName}";
+            ? "Chưa chọn nhà cung cấp T-VAN"
+            : $"Quy trình gửi nộp với {_provider.DisplayName}";
 
     private string HelpPanelIcon =>
         _provider.Code == TvanProviderCatalog.NoneCode ? Icons.Material.Filled.Warning
@@ -529,6 +531,62 @@ else
             _ => true
         };
     }
+
+    private static string DisplayStatus(string status) => status switch
+    {
+        CertificateStatus.Draft => "Nháp",
+        CertificateStatus.XmlGenerated => "Đã tạo XML",
+        CertificateStatus.Signed => "Đã ký",
+        CertificateStatus.Submitted => "Đã gửi",
+        CertificateStatus.Accepted => "Chấp nhận",
+        CertificateStatus.Rejected => "Từ chối",
+        _ => status
+    };
+
+    private static string BuildPdfFileName(PitCertificate cert)
+    {
+        var idPart = SanitizeFileNamePart(cert.ProformaNo);
+        var namePart = SanitizeFileNamePart(RemoveDiacritics(cert.TaxPayerName));
+
+        return string.IsNullOrWhiteSpace(namePart)
+            ? $"CTKT-{idPart}.pdf"
+            : $"CTKT-{idPart}-{namePart}.pdf";
+    }
+
+    private static string RemoveDiacritics(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var normalized = value.Replace('đ', 'd').Replace('Đ', 'D')
+            .Normalize(NormalizationForm.FormD);
+        var buffer = new List<char>(normalized.Length);
+
+        foreach (var ch in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                buffer.Add(ch);
+        }
+
+        return new string(buffer.ToArray()).Normalize(NormalizationForm.FormC);
+    }
+
+    private static string SanitizeFileNamePart(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "unknown";
+
+        var chars = value.Trim()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .ToArray();
+
+        var sanitized = new string(chars);
+        while (sanitized.Contains("--", StringComparison.Ordinal))
+            sanitized = sanitized.Replace("--", "-", StringComparison.Ordinal);
+
+        sanitized = sanitized.Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized) ? "unknown" : sanitized;
+    }
 }
 
 @* =====================================================================================
@@ -538,97 +596,29 @@ else
 
 @code {
     private RenderFragment NoProviderHelp() => @<MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Warning">
-        <b>No T-VAN provider selected.</b> The <i>Submit</i> button is hidden until you pick one on the
-        <MudLink Href="/pit/settings">PIT Settings</MudLink> page. You can still use this screen for data entry,
-        PDF rendering, and local archival.
+        <b>Chưa chọn nhà cung cấp T-VAN.</b> Nút <i>Gửi nộp</i> sẽ bị ẩn cho đến khi bạn chọn nhà cung cấp trong trang
+        <MudLink Href="/pit/settings">Cài đặt PIT</MudLink>. Bạn vẫn có thể nhập liệu, tạo PDF và lưu trữ nội bộ.
     </MudAlert>;
 
-    private RenderFragment ViettelHelp() =>@<div>
-        <MudText Typo="Typo.body2" Class="mb-3">
-            Viettel T-VAN accepts the certificate as <b>structured JSON</b> at
-            <code>/api/InvoiceAPI/InvoiceWS/createTaxDeductionCertificate/{supplierTaxCode}</code>. Viettel signs
-            (CTS Server) and forwards to the tax authority internally. Our app never sends the QĐ 1306 XML over
-            the wire — it's built locally only for optional audit / archival.
-        </MudText>
-
-        <MudGrid>
-            <MudItem xs="12" md="7">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">What we send</MudText>
-                <MudList T="string" Dense="true" DisablePadding="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Segment">
-                        <MudText Typo="Typo.body2"><b>generalInvoiceInfo</b> — envelope (series, type, date, adjustmentType, replacement refs)</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Person">
-                        <MudText Typo="Typo.body2"><b>taxPayerInfo</b> — staff identification (name, MST, residence, ID, contact)</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
-                        <MudText Typo="Typo.body2"><b>incomeInfo</b> — period, taxable income, deductions, PIT withheld</MudText>
-                    </MudListItem>
-                </MudList>
-            </MudItem>
-            <MudItem xs="12" md="5">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">What we get back</MudText>
-                <MudList T="string" Dense="true" DisablePadding="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Receipt">
-                        <MudText Typo="Typo.body2"><b>invoiceNo</b> — e.g. <code>CT/25E113</code></MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Tag">
-                        <MudText Typo="Typo.body2"><b>transactionID</b> — Viettel trace id</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.VpnKey">
-                        <MudText Typo="Typo.body2"><b>reservationCode</b> — mã bí mật for lookup</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Verified">
-                        <MudText Typo="Typo.body2"><b>codeOfTax</b> — real mã CQT (often async; we fall back to reservationCode until it arrives)</MudText>
-                    </MudListItem>
-                </MudList>
-            </MudItem>
-        </MudGrid>
-
-        <MudDivider Class="my-3" />
-
-        <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle with Viettel</MudText>
-        <MudText Typo="Typo.body2" Class="mb-2">
-            <code>Draft</code> → <i>Submit</i> → <code>Submitted</code> →
-            <code>Accepted</code> (locked, downloads only) or <code>Rejected</code>.
-            No local Generate XML / Sign step in the submission path.
-        </MudText>
-
-        <MudStack Row="true" Spacing="2" Class="mt-3">
-            <MudButton Href="/pit/settings/viettel" Variant="Variant.Outlined" Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Settings">
-                Viettel Service Settings
-            </MudButton>
-            <MudButton Href="docs/Viettel.md" Target="_blank" Variant="Variant.Text"
-                       StartIcon="@Icons.Material.Filled.MenuBook">
-                Full integration doc
-            </MudButton>
-        </MudStack>
-
-        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
-            Before going live: register the <b>invoice series</b> (e.g. <code>CT/25E</code>) on Viettel's portal,
-            fill in credentials + SupplierTaxCode in the Viettel Service Settings page, and verify a single cert
-            submits end-to-end on Viettel's test environment.
-        </MudAlert>
-    </div>;
+    private RenderFragment ViettelHelp() => @<PitCertificatesViettelHelp />;
 
     private RenderFragment StubHelp() =>@<div>
         <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Science">
-            <b>Stub provider active.</b> <i>Submit</i> returns a synthetic <code>invoiceNo</code> and <code>CqtCode</code>
-            without calling any real service — useful for local development and end-to-end UI testing. Switch to a real
-            provider (e.g. Viettel) on the <MudLink Href="/pit/settings">PIT Settings</MudLink> page before going to production.
+            <b>Đang dùng nhà cung cấp Stub.</b> <i>Gửi nộp</i> sẽ trả về <code>invoiceNo</code> và <code>CqtCode</code>
+            giả lập mà không gọi đến dịch vụ thật; phù hợp cho phát triển nội bộ và kiểm thử end-to-end. Hãy chuyển sang
+            nhà cung cấp thật (ví dụ Viettel) trong trang <MudLink Href="/pit/settings">Cài đặt PIT</MudLink> trước khi đưa vào vận hành.
         </MudAlert>
 
         <MudText Typo="Typo.body2">
-            The stub does not require <i>Generate XML</i> or <i>Sign</i>, so those buttons are hidden from this toolbar.
-            You can still download the PDF (rendered from local data) and open an individual cert to edit it.
+            Stub không cần <i>Tạo XML</i> hoặc <i>Ký số</i>, vì vậy các nút này được ẩn trên thanh công cụ.
+            Bạn vẫn có thể tải PDF (tạo từ dữ liệu nội bộ) và mở từng chứng từ để chỉnh sửa.
         </MudText>
     </div>;
 
     private RenderFragment XmlProviderHelp() =>@<div>
         <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
-            <b>Current provider: @_provider.DisplayName</b> — requires signed XML. Workflow: <i>Generate XML</i> →
-            <i>Sign</i> (via LocalAgent) → <i>Submit</i>.
+            <b>Nhà cung cấp hiện tại: @_provider.DisplayName</b> — yêu cầu XML đã ký. Quy trình: <i>Tạo XML</i> →
+            <i>Ký số</i> (qua LocalAgent) → <i>Gửi nộp</i>.
         </MudAlert>
         <PitCertificatesXmlReference />
 
