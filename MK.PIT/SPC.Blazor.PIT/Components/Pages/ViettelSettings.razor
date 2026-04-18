@@ -1,0 +1,209 @@
+@page "/pit/settings/viettel"
+@inject Csla.ApplicationContext ApplicationContext
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject SPC.Infrastructure.TvanSubmission.Viettel.ViettelTvanSubmissionService ViettelService
+
+<PageTitle>Viettel Service Settings</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/pit/settings"))" />
+    <MudText Typo="Typo.h4">Viettel Service Settings</MudText>
+</MudStack>
+
+<MudAlert Severity="Severity.Info" Class="mb-4" Icon="@Icons.Material.Filled.Gavel">
+    Connection and product settings for Viettel T-VAN (<b>Chứng từ khấu trừ thuế TNCN</b>, CTS Server flow).
+    Stored locally in this app's database. Values take effect on the next submission — no restart needed.
+</MudAlert>
+
+@if (_settings is null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <MudAlert Severity="@(_settings.IsReadyForSubmission ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-4"
+              Icon="@(_settings.IsReadyForSubmission ? Icons.Material.Filled.Verified : Icons.Material.Filled.Warning)">
+        Status:
+        <b>@(_settings.IsReadyForSubmission ? "Ready" : "Not ready")</b>
+        @if (_settings.LastConnectionTestUtc is not null)
+        {
+            <span> · Last test: @_settings.LastConnectionTestUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span>
+        }
+        @if (!string.IsNullOrWhiteSpace(_settings.LastConnectionTestMessage))
+        {
+            <div>@_settings.LastConnectionTestMessage</div>
+        }
+        @if (!_settings.IsReadyForSubmission && !string.IsNullOrWhiteSpace(_settings.LastTestedConfigHash))
+        {
+            <div>Saved settings changed after the last successful test. Run Test Connection again.</div>
+        }
+    </MudAlert>
+
+    <MudPaper Class="pa-6" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Endpoint</MudText>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField Label="Base URL" @bind-Value="_settings.BaseUrl" Required="true"
+                              HelperText="Production: https://api-sinvoice.viettel.vn · Test: Viettel-issued sandbox URL" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Login path" @bind-Value="_settings.LoginPath"
+                              HelperText="Default: /auth/login" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Submit path" @bind-Value="_settings.SubmitPath"
+                              HelperText="Use {mst} as the supplier-tax-code placeholder." />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-3">Credentials</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Username" @bind-Value="_settings.Username" Required="true"
+                              HelperText="Viettel-issued account (often MST-suffix, e.g. 0100109106-712)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Password" @bind-Value="_settings.Password" Required="true"
+                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="@(() => _showPassword = !_showPassword)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Supplier tax code (MST)" @bind-Value="_settings.SupplierTaxCode" Required="true"
+                              HelperText="Replaces {mst} in the Submit path." />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-3">Certificate product</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Invoice series (ký hiệu)" @bind-Value="_settings.InvoiceSeries" Required="true"
+                              HelperText="Must match a series registered on Viettel's portal (e.g. CT/25E)." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Invoice type" @bind-Value="_settings.InvoiceType"
+                              HelperText="Fixed at 03/TNCN for PIT withholding certificates." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Template code" @bind-Value="_settings.TemplateCode"
+                              HelperText="Fixed at 03/TNCN for PIT withholding certificates." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField Label="Currency code" @bind-Value="_settings.CurrencyCode" />
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-3">Tuning</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int" Label="Token refresh skew (seconds)" @bind-Value="_settings.TokenRefreshSkewSeconds"
+                                 HelperText="Refresh the cached access_token this many seconds before expiry." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int" Label="Request timeout (seconds)" @bind-Value="_settings.TimeoutSeconds" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving">
+                @(_saving ? "Saving..." : "Save")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="TestConnectionAsync" Disabled="@(_saving || _testing)">
+                @(_testing ? "Testing..." : "Test Connection")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/pit/settings"))">Back to PIT Settings</MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudAlert Severity="Severity.Success" Class="mt-4" Icon="@Icons.Material.Filled.Lock">
+        The password is encrypted before it is written to the database using ASP.NET Core Data Protection.
+        The encryption keys live in <code>{ContentRoot}/keys</code> — back that folder up together with
+        <code>spc-pit.db</code>, or the stored password will become unrecoverable and will need to be re-entered.
+    </MudAlert>
+}
+
+@code {
+    private SPC.BO.PIT.ViettelSettings? _settings;
+    private bool _saving;
+    private bool _testing;
+    private bool _showPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SPC.BO.PIT.ViettelSettings.GetViettelSettingsAsync(ApplicationContext);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_settings is null) return;
+        _saving = true;
+        try
+        {
+            _settings = await _settings.SaveAsync();
+            Snackbar.Add("Viettel settings saved. Applies to the next submission.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        if (_settings is null) return;
+
+        _testing = true;
+        try
+        {
+            var result = await ViettelService.TestConnectionAsync(ToOptions(_settings));
+            _settings.ConnectionReady = result.Success;
+            _settings.LastConnectionTestUtc = DateTime.UtcNow;
+            _settings.LastConnectionTestMessage = result.Message;
+            _settings.LastTestedConfigHash = result.Success ? _settings.ComputeConnectionConfigHash() : string.Empty;
+            _settings = await _settings.SaveAsync();
+
+            Snackbar.Add(
+                result.Success
+                    ? "Viettel connection test passed. Provider marked Ready."
+                    : $"Viettel connection test failed: {result.Message}",
+                result.Success ? Severity.Success : Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Connection test failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _testing = false;
+        }
+    }
+
+    private static SPC.Infrastructure.TvanSubmission.ViettelOptions ToOptions(SPC.BO.PIT.ViettelSettings settings) =>
+        new()
+        {
+            BaseUrl = settings.BaseUrl,
+            LoginPath = settings.LoginPath,
+            SubmitPath = settings.SubmitPath,
+            Username = settings.Username,
+            Password = settings.Password,
+            SupplierTaxCode = settings.SupplierTaxCode,
+            InvoiceSeries = settings.InvoiceSeries,
+            InvoiceType = settings.InvoiceType,
+            TemplateCode = settings.TemplateCode,
+            CurrencyCode = settings.CurrencyCode,
+            TokenRefreshSkewSeconds = settings.TokenRefreshSkewSeconds,
+            TimeoutSeconds = settings.TimeoutSeconds
+        };
+}

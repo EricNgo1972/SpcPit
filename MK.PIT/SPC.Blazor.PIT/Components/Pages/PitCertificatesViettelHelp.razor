@@ -1,0 +1,68 @@
+<div>
+    <MudText Typo="Typo.body2" Class="mb-3">
+        Viettel T-VAN accepts the certificate as <b>structured JSON</b> at
+        <code>/api/InvoiceAPI/InvoiceWS/createTaxDeductionCertificate/{supplierTaxCode}</code>. Viettel signs
+        (CTS Server) and forwards to the tax authority internally. Our app never sends the QĐ 1306 XML over
+        the wire — it's built locally only for optional audit / archival.
+    </MudText>
+
+    <MudGrid>
+        <MudItem xs="12" md="7">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">What we send</MudText>
+            <MudList T="string" Dense="true" DisablePadding="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Segment">
+                    <MudText Typo="Typo.body2"><b>generalInvoiceInfo</b> — envelope (series, type, date, adjustmentType, replacement refs)</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Person">
+                    <MudText Typo="Typo.body2"><b>taxPayerInfo</b> — staff identification (name, MST, residence, ID, contact)</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
+                    <MudText Typo="Typo.body2"><b>incomeInfo</b> — period, taxable income, deductions, PIT withheld</MudText>
+                </MudListItem>
+            </MudList>
+        </MudItem>
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.subtitle2" Class="mb-2">What we get back</MudText>
+            <MudList T="string" Dense="true" DisablePadding="true">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Receipt">
+                    <MudText Typo="Typo.body2"><b>invoiceNo</b> — e.g. <code>CT/25E113</code></MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Tag">
+                    <MudText Typo="Typo.body2"><b>transactionID</b> — Viettel trace id</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.VpnKey">
+                    <MudText Typo="Typo.body2"><b>reservationCode</b> — mã bí mật for lookup</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Verified">
+                    <MudText Typo="Typo.body2"><b>codeOfTax</b> — real mã CQT (often async; we fall back to reservationCode until it arrives)</MudText>
+                </MudListItem>
+            </MudList>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-3" />
+
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle with Viettel</MudText>
+    <MudText Typo="Typo.body2" Class="mb-2">
+        <code>Draft</code> → <i>Submit</i> → <code>Submitted</code> →
+        <code>Accepted</code> (locked, downloads only) or <code>Rejected</code>.
+        No local Generate XML / Sign step in the submission path.
+    </MudText>
+
+    <MudStack Row="true" Spacing="2" Class="mt-3">
+        <MudButton Href="/pit/settings/viettel" Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Settings">
+            Viettel Service Settings
+        </MudButton>
+        <MudButton Href="docs/Viettel.md" Target="_blank" Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.MenuBook">
+            Full integration doc
+        </MudButton>
+    </MudStack>
+
+    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+        Before going live: register the <b>invoice series</b> (e.g. <code>CT/25E</code>) on Viettel's portal,
+        fill in credentials + SupplierTaxCode in the Viettel Service Settings page, and verify a single cert
+        submits end-to-end on Viettel's test environment.
+    </MudAlert>
+</div>

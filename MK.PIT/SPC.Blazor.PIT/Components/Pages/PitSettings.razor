@@ -1,6 +1,8 @@
 @page "/pit/settings"
+@using SPC.Infrastructure.TvanSubmission
 @inject Csla.ApplicationContext ApplicationContext
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <PageTitle>PIT Settings</PageTitle>
 <MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
@@ -57,31 +59,71 @@ else
         <MudText Typo="Typo.h6" Class="mb-3">External services</MudText>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudTextField Label="LocalAgent sign URL" @bind-Value="_settings.LocalAgentSignUrl" />
+                <MudTextField Label="LocalAgent sign URL" @bind-Value="_settings.LocalAgentSignUrl"
+                              HelperText="Only used when you Sign XML locally. Optional if your TVAN signs internally (e.g. Viettel)." />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudTextField Label="TVAN provider" @bind-Value="_settings.TvanProviderName" />
-            </MudItem>
-            <MudItem xs="12">
-                <MudTextField Label="TVAN submit URL" @bind-Value="_settings.TvanSubmitUrl" />
+                <MudSelect T="string" Label="TVAN provider" @bind-Value="_settings.TvanProviderName">
+                    @foreach (var p in TvanProviderCatalog.All)
+                    {
+                        <MudSelectItem T="string" Value="@p.Code" Disabled="@(!p.IsAvailable)">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText>@p.DisplayName</MudText>
+                                @if (!p.IsAvailable)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">planned</MudChip>
+                                }
+                            </MudStack>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                @{ var selected = TvanProviderCatalog.Get(_settings.TvanProviderName); }
+                <MudText Typo="Typo.caption" Class="mt-1 d-block">@selected.Description</MudText>
             </MudItem>
         </MudGrid>
 
-        <MudStack Row="true" Class="mt-4">
+        <MudStack Row="true" Class="mt-4" Spacing="2">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@_saving">
                 @(_saving ? "Saving..." : "Save")
             </MudButton>
         </MudStack>
     </MudPaper>
+
+    @if (string.Equals(_settings.TvanProviderName, TvanProviderCatalog.ViettelCode, StringComparison.OrdinalIgnoreCase))
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="1">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6">Viettel T-VAN</MudText>
+                    <MudText Typo="Typo.body2">Credentials, endpoints, and product series for Viettel SInvoice.</MudText>
+                    @if (_viettelSettings is not null)
+                    {
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(_viettelSettings.IsReadyForSubmission ? Color.Success : Color.Warning)"
+                                 Variant="Variant.Outlined" Class="mt-2">
+                            @(_viettelSettings.IsReadyForSubmission ? "Ready" : "Not ready")
+                        </MudChip>
+                    }
+                </MudStack>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Settings"
+                           OnClick="@(() => Navigation.NavigateTo("/pit/settings/viettel"))">
+                    Viettel Service Settings
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
 }
 
 @code {
     private SPC.BO.PIT.PitSettings? _settings;
+    private SPC.BO.PIT.ViettelSettings? _viettelSettings;
     private bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
         _settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+        _viettelSettings = await SPC.BO.PIT.ViettelSettings.GetViettelSettingsAsync(ApplicationContext);
     }
 
     private async Task SaveAsync()

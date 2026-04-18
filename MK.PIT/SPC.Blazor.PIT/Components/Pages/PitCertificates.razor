@@ -1,6 +1,7 @@
 @page "/pit/certificates"
 @using System.IO.Compression
 @using SPC.BO.PIT.Pdf
+@using SPC.Infrastructure.TvanSubmission
 @inject Csla.ApplicationContext ApplicationContext
 @inject IXmlSigningService SigningService
 @inject ITvanSubmissionService TvanService
@@ -10,105 +11,59 @@
 @inject NavigationManager Navigation
 
 <PageTitle>PIT Certificates</PageTitle>
-<MudText Typo="Typo.h4" Class="mb-4">Certificates</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">Certificates</MudText>
+    <MudChip T="string" Size="Size.Small" Color="@(_provider.IsAvailable ? Color.Primary : Color.Warning)"
+             Icon="@Icons.Material.Filled.Cable">
+        Provider: @_provider.DisplayName
+    </MudChip>
+    @if (_provider.Code == TvanProviderCatalog.ViettelCode)
+    {
+        <MudChip T="string" Size="Size.Small" Color="@(_providerReady ? Color.Success : Color.Warning)"
+                 Variant="Variant.Outlined" Icon="@Icons.Material.Filled.VerifiedUser">
+            @(_providerReady ? "Ready" : "Not ready")
+        </MudChip>
+    }
+    @if (!_provider.IsAvailable && _provider.Code != TvanProviderCatalog.NoneCode)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+            not implemented — Submit will fail
+        </MudChip>
+    }
+</MudStack>
 
+@* Help content adapts to the selected T-VAN provider:
+   - None                  → prompt to configure a provider
+   - JSON-based (Viettel,  → provider-specific flow + link to its docs; QĐ 1306 XML is optional
+     Stub)                   and relegated to a secondary collapsible
+   - XML-requiring         → full QĐ 1306 reference (envelope, rules, mapping, lifecycle)
+*@
 <MudExpansionPanels Elevation="0" Class="mb-4">
-    <MudExpansionPanel Text="XML mapping &amp; government rules (QĐ 1306/QĐ-TCT, 13/06/2025)"
-                       Icon="@Icons.Material.Filled.Gavel">
-        <MudText Typo="Typo.body2" Class="mb-3">
-            Each PIT withholding certificate is emitted as a UTF-8 XML document following the General Department of
-            Taxation's technical specification <b>Quyết định 1306/QĐ-TCT (13/06/2025)</b>. The signed XML is what gets
-            submitted to the tax authority; HR data (entered in this app) plus the employer's organization settings are
-            the single source of truth for every XML element.
-        </MudText>
-
-        <MudGrid>
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Envelope structure (§II)</MudText>
-                <MudPaper Class="pa-3" Style="font-family: var(--mud-typography-body1-family, monospace); font-size: 0.8rem; white-space: pre; overflow-x: auto;" Elevation="0">
-@($@"<{PitXmlSchema.TDiep}>
-  <{PitXmlSchema.TTChung}>            Message header
-    <{PitXmlSchema.PBan}>              Schema version (PitSettings.XmlSchemaVersion)
-    <{PitXmlSchema.MNGui}>             Sender code (PitSettings.SenderCode)
-    <{PitXmlSchema.MNNhan}>            Receiver = ""{PitXmlSchema.TaxAuthorityReceiver}""
-    <{PitXmlSchema.MLTDiep}>           Message type (PitSettings.XmlMessageTypeCode)
-    <{PitXmlSchema.MTDiep}>            32-char UUID, uppercase, no dashes
-    <{PitXmlSchema.MTDTChieu}>         Replacement ref (RelatedProformaNo)
-    <{PitXmlSchema.MST}>               Employer MST
-    <{PitXmlSchema.SLuong}>1</{PitXmlSchema.SLuong}>
-  <{PitXmlSchema.DLieu}>
-    <{PitXmlSchema.CTDTKhauTru}>       One cert per document
-      <{PitXmlSchema.DLCT}>
-        <{PitXmlSchema.TTChungCTu}>    Certificate identification
-        <{PitXmlSchema.TTTo}>          Organization (employer)
-        <{PitXmlSchema.TTNNT}>         Tax payer (staff)
-        <{PitXmlSchema.TTKhauTru}>     Withholding figures
-      <{PitXmlSchema.Signature} xmlns=""{PitXmlSchema.SignatureNs}""/>
-")
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Format rules (§I)</MudText>
-                <MudList T="string" Dense="true" DisablePadding="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Code">
-                        <MudText Typo="Typo.body2">Encoding: <b>UTF-8</b>, no BOM, <code>TCVN 6909:2001</code>-compatible.</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule">
-                        <MudText Typo="Typo.body2">Dates <code>yyyy-MM-dd</code>; datetimes <code>yyyy-MM-ddTHH:mm:ss</code> in <b>GMT+7</b> (Asia/Ho_Chi_Minh).</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
-                        <MudText Typo="Typo.body2">Amounts: ≤ 21 total digits, ≤ 6 decimal places, invariant culture, no thousands separators.</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.DataUsage">
-                        <MudText Typo="Typo.body2">Single message ≤ <b>2 MB</b>. One cert per document in this app.</MudText>
-                    </MudListItem>
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Fingerprint">
-                        <MudText Typo="Typo.body2">Signed with <b>W3C XML Digital Signature</b>; the generator inserts an empty <code>&lt;Signature&gt;</code> placeholder inside <code>&lt;@PitXmlSchema.CTDTKhauTru&gt;</code> — the LocalAgent fills it in.</MudText>
-                    </MudListItem>
-                </MudList>
-            </MudItem>
-
-            <MudItem xs="12">
-                <MudDivider Class="my-2" />
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Field → XML mapping</MudText>
-                <MudSimpleTable Dense="true" Hover="true" Bordered="true">
-                    <thead>
-                        <tr><th>Group</th><th>Certificate field</th><th>XML element</th><th>Source</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in _mappingTable)
-                        {
-                            <tr>
-                                <td><MudChip T="string" Size="Size.Small" Color="@row.Color">@row.Group</MudChip></td>
-                                <td><code>@row.Field</code></td>
-                                <td><code>@row.XmlTag</code></td>
-                                <td>@row.Source</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            </MudItem>
-
-            <MudItem xs="12">
-                <MudDivider Class="my-2" />
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle</MudText>
-                <MudText Typo="Typo.body2" Class="mb-2">
-                    Each certificate transitions through:
-                    <code>Draft</code> → <code>XmlGenerated</code> (unsigned bytes stored) →
-                    <code>Signed</code> (LocalAgent signed the envelope) →
-                    <code>Submitted</code> → <code>Accepted</code> (mã CQT returned) or <code>Rejected</code>.
-                </MudText>
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
-                    <b>Still to be confirmed from QĐ 1306 Phụ lục:</b> the exact <code>MLTDiep</code> code for
-                    "Chứng từ khấu trừ thuế TNCN" and the precise <code>DLCT</code> child element names shown above.
-                    Corrections are localized to <code>PitXmlSchema.cs</code>; no generator changes required.
-                </MudAlert>
-            </MudItem>
-        </MudGrid>
+    <MudExpansionPanel Text="@HelpPanelTitle" Icon="@HelpPanelIcon">
+        @if (_provider.Code == TvanProviderCatalog.NoneCode)
+        {
+            @NoProviderHelp()
+        }
+        else if (_provider.Code == TvanProviderCatalog.ViettelCode)
+        {
+            @ViettelHelp()
+        }
+        else if (_provider.Code == TvanProviderCatalog.StubCode)
+        {
+            @StubHelp()
+        }
+        else
+        {
+            @XmlProviderHelp()
+        }
     </MudExpansionPanel>
+
+  
 </MudExpansionPanels>
 
+@* Toolbar buttons adapt to the active provider. XML-related actions (Generate / Sign /
+   Download XML) are rendered only for providers that actually need signed XML bytes —
+   for Viettel & Stub they would confuse the workflow (Viettel signs internally). *@
 <MudPaper Class="pa-3 mb-3" Elevation="1">
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
         <MudText Typo="Typo.subtitle2">
@@ -122,44 +77,38 @@
             Open
         </MudButton>
 
+        @if (_provider.RequiresSignedXml)
+        {
+            <MudDivider Vertical="true" FlexItem="true" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Build"
+                       Disabled="@(!_selected.Any() || _busy)"
+                       OnClick="GenerateBulkAsync">
+                Generate XML
+            </MudButton>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Warning"
+                       StartIcon="@Icons.Material.Filled.Fingerprint"
+                       Disabled="@(!_selected.Any() || _busy)"
+                       OnClick="SignBulkAsync">
+                Sign
+            </MudButton>
+        }
+
+        @if (_provider.Code != TvanProviderCatalog.NoneCode)
+        {
+            <MudDivider Vertical="true" FlexItem="true" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.Send"
+                       Disabled="@(!_selected.Any() || _busy || !_providerReady)"
+                       OnClick="SubmitBulkAsync">
+                Submit via @_provider.DisplayName
+            </MudButton>
+        }
+
         <MudDivider Vertical="true" FlexItem="true" />
-
-        <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Build"
-                   Disabled="@(!_selected.Any() || _busy)"
-                   OnClick="GenerateBulkAsync">
-            Generate XML
-        </MudButton>
-
-        <MudButton Variant="Variant.Filled" Color="Color.Warning"
-                   StartIcon="@Icons.Material.Filled.Fingerprint"
-                   Disabled="@(!_selected.Any() || _busy)"
-                   OnClick="SignBulkAsync">
-            Sign
-        </MudButton>
-
-        <MudButton Variant="Variant.Filled" Color="Color.Success"
-                   StartIcon="@Icons.Material.Filled.Send"
-                   Disabled="@(!_selected.Any() || _busy)"
-                   OnClick="SubmitBulkAsync">
-            Submit
-        </MudButton>
-
-        <MudDivider Vertical="true" FlexItem="true" />
-
-        <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.Download"
-                   Disabled="@(!_selected.Any() || _busy)"
-                   OnClick="@(() => DownloadBulkAsync(signed: false))">
-            Download Unsigned
-        </MudButton>
-
-        <MudButton Variant="Variant.Outlined"
-                   StartIcon="@Icons.Material.Filled.Download"
-                   Disabled="@(!_selected.Any() || _busy)"
-                   OnClick="@(() => DownloadBulkAsync(signed: true))">
-            Download Signed
-        </MudButton>
 
         <MudButton Variant="Variant.Outlined" Color="Color.Error"
                    StartIcon="@Icons.Material.Filled.PictureAsPdf"
@@ -167,6 +116,23 @@
                    OnClick="GeneratePdfBulkAsync">
             Download PDF
         </MudButton>
+
+        @if (_provider.RequiresSignedXml)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(!_selected.Any() || _busy)"
+                       OnClick="@(() => DownloadBulkAsync(signed: false))">
+                Download Unsigned XML
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="@(!_selected.Any() || _busy)"
+                       OnClick="@(() => DownloadBulkAsync(signed: true))">
+                Download Signed XML
+            </MudButton>
+        }
 
         @if (_busy)
         {
@@ -232,52 +198,16 @@ else
     private int? _yearFilter;
     private string? _search;
     private bool _busy;
+    private TvanProviderInfo _provider = TvanProviderCatalog.Stub;
+    private bool _providerReady = true;
 
-    private sealed record MappingRow(string Group, string Field, string XmlTag, string Source, Color Color);
-
-    private static readonly IReadOnlyList<MappingRow> _mappingTable =
-    [
-        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.PBan}",       "PitSettings.XmlSchemaVersion",            Color.Primary),
-        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MNGui}",      "PitSettings.SenderCode",                  Color.Primary),
-        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MLTDiep}",    "PitSettings.XmlMessageTypeCode",          Color.Primary),
-        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MTDiep}",     "Auto: 32-char UUID + sender prefix",      Color.Primary),
-        new("Envelope",    "RelatedProformaNo (if replacement)",   $"{PitXmlSchema.TTChung}/{PitXmlSchema.MTDTChieu}",  "PitCertificate.RelatedProformaNo",        Color.Primary),
-        new("Envelope",    "—",                                    $"{PitXmlSchema.TTChung}/{PitXmlSchema.MST}",        "PitSettings.OrganizationTaxCode",         Color.Primary),
-
-        new("Cert id",     "ProformaNo",                           $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.CertNumber}",  "PitCertificate.ProformaNo",         Color.Info),
-        new("Cert id",     "TaxPayerCode",                         $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.CertFormNo}",  "PitCertificate.TaxPayerCode",       Color.Info),
-        new("Cert id",     "RelatedFormNo / RelatedProformaNo",    $"{PitXmlSchema.TTChungCTu}/{PitXmlSchema.RelatedCert}", "PitCertificate (replacement only)", Color.Info),
-
-        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.TMST}",          "PitSettings.OrganizationTaxCode",         Color.Secondary),
-        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OName}",         "PitSettings.OrganizationName",            Color.Secondary),
-        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OAddress}",      "PitSettings.OrganizationAddress",         Color.Secondary),
-        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OPhone}",        "PitSettings.OrganizationPhone",           Color.Secondary),
-        new("Organization","—",                                    $"{PitXmlSchema.TTTo}/{PitXmlSchema.OEmail}",        "PitSettings.OrganizationEmail",           Color.Secondary),
-
-        new("Tax payer",   "TaxPayerName",                         $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TName}",        "PitCertificate.TaxPayerName",             Color.Success),
-        new("Tax payer",   "TaxPayerTaxCode",                      $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TMST}",         "PitCertificate.TaxPayerTaxCode",          Color.Success),
-        new("Tax payer",   "Nationality",                          $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TNat}",         "PitCertificate.Nationality",              Color.Success),
-        new("Tax payer",   "ResidentType",                         $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TResType}",     "PitCertificate.ResidentType",             Color.Success),
-        new("Tax payer",   "IdentificationNo",                     $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIdNo}",        "PitCertificate.IdentificationNo",         Color.Success),
-        new("Tax payer",   "IssueDate",                            $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIssueDate}",   "PitCertificate.IssueDate (yyyy-MM-dd)",   Color.Success),
-        new("Tax payer",   "IssuePlace",                           $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TIssuePlace}",  "PitCertificate.IssuePlace",               Color.Success),
-        new("Tax payer",   "Phone",                                $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TPhone}",       "PitCertificate.Phone",                    Color.Success),
-        new("Tax payer",   "Email",                                $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TEmail}",       "PitCertificate.Email",                    Color.Success),
-        new("Tax payer",   "Address",                              $"{PitXmlSchema.TTNNT}/{PitXmlSchema.TAddress}",     "PitCertificate.Address",                  Color.Success),
-
-        new("Withholding", "IncomePaymentYear",                    $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodYear}",  "PitCertificate.IncomePaymentYear",     Color.Warning),
-        new("Withholding", "IncomePaymentMonthFrom",               $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodFrom}",  "PitCertificate.IncomePaymentMonthFrom",Color.Warning),
-        new("Withholding", "IncomePaymentMonthTo",                 $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TPeriodTo}",    "PitCertificate.IncomePaymentMonthTo",  Color.Warning),
-        new("Withholding", "IncomeType",                           $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TIncomeType}",  "PitCertificate.IncomeType",            Color.Warning),
-        new("Withholding", "TotalTaxableIncome",                   $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TTaxableIncome}","PitCertificate.TotalTaxableIncome",   Color.Warning),
-        new("Withholding", "AmountPersonalIncomeTax",              $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TTaxWithheld}", "PitCertificate.AmountPersonalIncomeTax",Color.Warning),
-        new("Withholding", "InsurancePremiums",                    $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TInsurance}",   "PitCertificate.InsurancePremiums",     Color.Warning),
-        new("Withholding", "CharityDonations",                     $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TCharity}",     "PitCertificate.CharityDonations",      Color.Warning),
-        new("Withholding", "IncomeStillReceivable",                $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TStillReceivable}","PitCertificate.IncomeStillReceivable",Color.Warning),
-        new("Withholding", "Note",                                 $"{PitXmlSchema.TTKhauTru}/{PitXmlSchema.TNote}",        "PitCertificate.Note",                  Color.Warning),
-    ];
-
-    protected override async Task OnInitializedAsync() => await ReloadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+        _provider = TvanProviderCatalog.Get(settings.TvanProviderName);
+        _providerReady = await ResolveProviderReadyAsync(_provider);
+        await ReloadAsync();
+    }
 
     private async Task ReloadAsync()
     {
@@ -312,9 +242,17 @@ else
 
     private static bool IsLocked(PitCertificateInfo c) => c.Status == CertificateStatus.Accepted;
 
+    // Generate XML and Sign remain optional audit utilities — useful for local archival,
+    // cross-checking, and providers that want signed bytes. With Viettel they are NOT
+    // required before Submit (Viettel takes structured JSON and signs internally).
     private static bool CanGenerate(PitCertificateInfo c) => !IsLocked(c);
     private static bool CanSign(PitCertificateInfo c)     => !IsLocked(c) && c.Status == CertificateStatus.XmlGenerated;
-    private static bool CanSubmit(PitCertificateInfo c)   => !IsLocked(c) && c.Status == CertificateStatus.Signed;
+
+    // Submit is allowed from any non-locked, non-in-flight state (Draft / XmlGenerated /
+    // Signed / Rejected). Viettel doesn't need the XML; other providers that do need it
+    // will just need Generate + Sign run first to populate the bytes.
+    private static bool CanSubmit(PitCertificateInfo c)   =>
+        !IsLocked(c) && c.Status != CertificateStatus.Submitted;
 
     // --- Single-row open ---
 
@@ -350,11 +288,20 @@ else
                 await PitXmlCommand.MarkSignedAsync(ApplicationContext, id, signed);
             },
             verb: "Sign",
-            skipReason: "locked or not in XmlGenerated state");
+            skipReason: "locked, already signed, or no XML generated yet");
     }
 
     private async Task SubmitBulkAsync()
     {
+        if (!_providerReady)
+        {
+            Snackbar.Add("Current provider is not ready for submission. Complete the provider setup first.", Severity.Warning);
+            return;
+        }
+
+        var settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+        var settingsInput = PitSettingsXmlInput.From(settings);
+
         await RunBulkAsync(
             eligible: CanSubmit,
             action: async id =>
@@ -362,14 +309,22 @@ else
                 var cert = await ApplicationContext.GetRequiredService<IDataPortalFactory>()
                     .GetPortal<PitCertificate>().FetchAsync(id);
                 await PitXmlCommand.MarkSubmittedAsync(ApplicationContext, id);
-                var response = await TvanService.SubmitAsync(cert.SignedXml ?? []);
+
+                var req = new TvanSubmissionRequest(
+                    Certificate: PitCertificateXmlInput.From(cert),
+                    Settings: settingsInput,
+                    SignedXml: cert.SignedXml);
+                var response = await TvanService.SubmitAsync(req);
+
                 if (response.Accepted)
-                    await PitXmlCommand.MarkAcceptedAsync(ApplicationContext, id, response.CqtCode ?? "");
+                    await PitXmlCommand.MarkAcceptedAsync(ApplicationContext, id,
+                        response.CqtCode ?? response.InvoiceNo ?? "");
                 else
-                    await PitXmlCommand.MarkRejectedAsync(ApplicationContext, id, response.RejectReason ?? "Rejected");
+                    await PitXmlCommand.MarkRejectedAsync(ApplicationContext, id,
+                        response.RejectReason ?? "Rejected");
             },
             verb: "Submit",
-            skipReason: "locked or not in Signed state");
+            skipReason: "locked or already submitted");
     }
 
     /// <summary>
@@ -550,4 +505,132 @@ else
             _busy = false;
         }
     }
+
+    // --- Provider-aware help content ------------------------------------------------------
+
+    private string HelpPanelTitle =>
+        _provider.Code == TvanProviderCatalog.NoneCode
+            ? "No T-VAN provider selected"
+            : $"How submission works with {_provider.DisplayName}";
+
+    private string HelpPanelIcon =>
+        _provider.Code == TvanProviderCatalog.NoneCode ? Icons.Material.Filled.Warning
+        : _provider.RequiresSignedXml                   ? Icons.Material.Filled.Gavel
+                                                        : Icons.Material.Filled.Info;
+
+    private async Task<bool> ResolveProviderReadyAsync(TvanProviderInfo provider)
+    {
+        if (!provider.IsAvailable) return false;
+
+        return provider.Code switch
+        {
+            TvanProviderCatalog.NoneCode => false,
+            TvanProviderCatalog.ViettelCode => (await SPC.BO.PIT.ViettelSettings.GetViettelSettingsAsync(ApplicationContext)).IsReadyForSubmission,
+            _ => true
+        };
+    }
+}
+
+@* =====================================================================================
+   Help-panel render fragments. Kept at the end of the file for readability — the top of
+   the razor invokes @NoProviderHelp(), @ViettelHelp(), etc. based on the active provider.
+   ===================================================================================== *@
+
+@code {
+    private RenderFragment NoProviderHelp() => @<MudAlert Severity="Severity.Warning" Dense="true" Icon="@Icons.Material.Filled.Warning">
+        <b>No T-VAN provider selected.</b> The <i>Submit</i> button is hidden until you pick one on the
+        <MudLink Href="/pit/settings">PIT Settings</MudLink> page. You can still use this screen for data entry,
+        PDF rendering, and local archival.
+    </MudAlert>;
+
+    private RenderFragment ViettelHelp() =>@<div>
+        <MudText Typo="Typo.body2" Class="mb-3">
+            Viettel T-VAN accepts the certificate as <b>structured JSON</b> at
+            <code>/api/InvoiceAPI/InvoiceWS/createTaxDeductionCertificate/{supplierTaxCode}</code>. Viettel signs
+            (CTS Server) and forwards to the tax authority internally. Our app never sends the QĐ 1306 XML over
+            the wire — it's built locally only for optional audit / archival.
+        </MudText>
+
+        <MudGrid>
+            <MudItem xs="12" md="7">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">What we send</MudText>
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Segment">
+                        <MudText Typo="Typo.body2"><b>generalInvoiceInfo</b> — envelope (series, type, date, adjustmentType, replacement refs)</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Person">
+                        <MudText Typo="Typo.body2"><b>taxPayerInfo</b> — staff identification (name, MST, residence, ID, contact)</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Calculate">
+                        <MudText Typo="Typo.body2"><b>incomeInfo</b> — period, taxable income, deductions, PIT withheld</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">What we get back</MudText>
+                <MudList T="string" Dense="true" DisablePadding="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Receipt">
+                        <MudText Typo="Typo.body2"><b>invoiceNo</b> — e.g. <code>CT/25E113</code></MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Tag">
+                        <MudText Typo="Typo.body2"><b>transactionID</b> — Viettel trace id</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.VpnKey">
+                        <MudText Typo="Typo.body2"><b>reservationCode</b> — mã bí mật for lookup</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Verified">
+                        <MudText Typo="Typo.body2"><b>codeOfTax</b> — real mã CQT (often async; we fall back to reservationCode until it arrives)</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudItem>
+        </MudGrid>
+
+        <MudDivider Class="my-3" />
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Lifecycle with Viettel</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2">
+            <code>Draft</code> → <i>Submit</i> → <code>Submitted</code> →
+            <code>Accepted</code> (locked, downloads only) or <code>Rejected</code>.
+            No local Generate XML / Sign step in the submission path.
+        </MudText>
+
+        <MudStack Row="true" Spacing="2" Class="mt-3">
+            <MudButton Href="/pit/settings/viettel" Variant="Variant.Outlined" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Settings">
+                Viettel Service Settings
+            </MudButton>
+            <MudButton Href="docs/Viettel.md" Target="_blank" Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.MenuBook">
+                Full integration doc
+            </MudButton>
+        </MudStack>
+
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+            Before going live: register the <b>invoice series</b> (e.g. <code>CT/25E</code>) on Viettel's portal,
+            fill in credentials + SupplierTaxCode in the Viettel Service Settings page, and verify a single cert
+            submits end-to-end on Viettel's test environment.
+        </MudAlert>
+    </div>;
+
+    private RenderFragment StubHelp() =>@<div>
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" Icon="@Icons.Material.Filled.Science">
+            <b>Stub provider active.</b> <i>Submit</i> returns a synthetic <code>invoiceNo</code> and <code>CqtCode</code>
+            without calling any real service — useful for local development and end-to-end UI testing. Switch to a real
+            provider (e.g. Viettel) on the <MudLink Href="/pit/settings">PIT Settings</MudLink> page before going to production.
+        </MudAlert>
+
+        <MudText Typo="Typo.body2">
+            The stub does not require <i>Generate XML</i> or <i>Sign</i>, so those buttons are hidden from this toolbar.
+            You can still download the PDF (rendered from local data) and open an individual cert to edit it.
+        </MudText>
+    </div>;
+
+    private RenderFragment XmlProviderHelp() =>@<div>
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+            <b>Current provider: @_provider.DisplayName</b> — requires signed XML. Workflow: <i>Generate XML</i> →
+            <i>Sign</i> (via LocalAgent) → <i>Submit</i>.
+        </MudAlert>
+        <PitCertificatesXmlReference />
+
+    </div>;
 }

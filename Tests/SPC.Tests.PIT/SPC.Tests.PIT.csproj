@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\MK.PIT\SPC.BO.PIT\SPC.BO.PIT.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\SPC.Infrastructure.TvanSubmission\SPC.Infrastructure.TvanSubmission.csproj" />
   </ItemGroup>
 
   <ItemGroup>

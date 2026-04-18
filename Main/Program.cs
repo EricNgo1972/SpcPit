@@ -1,4 +1,5 @@
 using Csla.Configuration;
+using Microsoft.AspNetCore.DataProtection;
 using MudBlazor.Services;
 using SPC.BO;
 using SPC.BO.PIT;
@@ -7,6 +8,7 @@ using SPC.DAL.SQLite.PIT;
 using SPC.Infrastructure.TvanSubmission;
 using SPC.Infrastructure.XmlSigning;
 using Main.Components;
+using Main.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,14 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+
+// Data Protection — encrypts sensitive BO values (e.g. Viettel password) before they
+// reach the DAL. Keys persist to {ContentRoot}/keys so encrypted rows survive restarts.
+// Back up the keys folder together with spc-pit.db.
+builder.Services.AddDataProtection()
+    .SetApplicationName("SpcPit")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")));
+builder.Services.AddSingleton<ISensitiveDataProtector, DataProtectionSensitiveDataProtector>();
 
 // CSLA + MK.Core + PIT module
 builder.Services.AddCsla();

@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\MK.PIT\SPC.BO.PIT\SPC.BO.PIT.csproj" />
+  </ItemGroup>
+
 </Project>

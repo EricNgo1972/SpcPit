@@ -1,9 +1,16 @@
 @page "/"
 @inject Csla.ApplicationContext ApplicationContext
+@using SPC.Infrastructure.TvanSubmission
 
 <PageTitle>PIT Dashboard</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2" Class="mb-4">
+    <MudText Typo="Typo.h4">Dashboard</MudText>
+    <MudChip T="string" Size="Size.Small" Color="@(_provider.IsAvailable ? Color.Primary : Color.Warning)"
+             Icon="@Icons.Material.Filled.Cable">
+        Provider: @_provider.DisplayName
+    </MudChip>
+</MudStack>
 
 @if (_certs is null)
 {
@@ -11,18 +18,28 @@
 }
 else
 {
-    <MudGrid>
-        @foreach (var status in CertificateStatus.All)
+    <MudText Typo="Typo.body2" Class="mb-2">@PrimaryWorkflowTitle</MudText>
+    <div class="pit-dashboard-grid">
+        @foreach (var card in PrimaryWorkflowCards)
         {
-            var count = _certs.Count(c => c.Status == status);
-            <MudItem xs="12" sm="6" md="4" lg="2">
-                <MudPaper Class="pa-4" Elevation="2">
-                    <MudText Typo="Typo.caption">@status</MudText>
-                    <MudText Typo="Typo.h4">@count</MudText>
-                </MudPaper>
-            </MudItem>
+            var count = CountByStatus(card.Statuses);
+            <MudPaper Class="pa-4 pit-dashboard-card" Elevation="2">
+                <MudStack Class="fill-height" Justify="Justify.SpaceBetween">
+                    <div>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
+                            <MudIcon Icon="@card.Icon" Color="@card.Color" Size="Size.Small" />
+                            <MudText Typo="Typo.caption">@card.Title</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.h4">@count</MudText>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(card.Description))
+                    {
+                        <MudText Typo="Typo.caption">@card.Description</MudText>
+                    }
+                </MudStack>
+            </MudPaper>
         }
-    </MudGrid>
+    </div>
 
     <MudDivider Class="my-4" />
 
@@ -33,11 +50,84 @@ else
     </MudStack>
 }
 
+<style>
+    .pit-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .pit-dashboard-card {
+        height: 100%;
+        min-height: 150px;
+    }
+
+    .pit-dashboard-card .fill-height {
+        height: 100%;
+    }
+
+    @@media (max-width: 600px) {
+        .pit-dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 @code {
     private PitCertificateInfoList? _certs;
+    private TvanProviderInfo _provider = TvanProviderCatalog.Stub;
+
+    private sealed record DashboardCard(
+        string Title,
+        IReadOnlyList<string> Statuses,
+        Color Color,
+        string Icon,
+        string? Description = null);
 
     protected override async Task OnInitializedAsync()
     {
+        var settings = await SPC.BO.PIT.PitSettings.GetPitSettingsAsync(ApplicationContext);
+        _provider = TvanProviderCatalog.Get(settings.TvanProviderName);
         _certs = await PitCertificateInfoList.GetAllAsync(ApplicationContext);
     }
+
+    private string PrimaryWorkflowTitle =>
+        _provider.Code switch
+        {
+            TvanProviderCatalog.NoneCode => "Local-only workflow. Submission is disabled in current settings.",
+            _ when _provider.RequiresSignedXml => $"{_provider.DisplayName} workflow: generate XML, sign, submit, wait for tax response.",
+            _ => $"{_provider.DisplayName} workflow: submit directly to the provider, then wait for tax response."
+        };
+
+    private IReadOnlyList<DashboardCard> PrimaryWorkflowCards =>
+        _provider.Code switch
+        {
+            TvanProviderCatalog.NoneCode =>
+            [
+                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote, "Local records not yet submitted anywhere."),
+                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Historical in-flight rows from a previous provider/config."),
+                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Locked rows with mã CQT."),
+                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error, "Rows that failed a prior submission.")
+            ],
+            _ when _provider.RequiresSignedXml =>
+            [
+                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
+                new("XML Generated", [CertificateStatus.XmlGenerated], Color.Info, Icons.Material.Filled.DataObject),
+                new("Signed", [CertificateStatus.Signed], Color.Warning, Icons.Material.Filled.Fingerprint),
+                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send),
+                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified),
+                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
+            ],
+            _ =>
+            [
+                new("Draft", [CertificateStatus.Draft], Color.Default, Icons.Material.Filled.EditNote),
+                new("Submitted", [CertificateStatus.Submitted], Color.Warning, Icons.Material.Filled.Send, "Sent to the provider without local XML signing."),
+                new("Accepted", [CertificateStatus.Accepted], Color.Success, Icons.Material.Filled.Verified, "Tax authority returned mã CQT."),
+                new("Rejected", [CertificateStatus.Rejected], Color.Error, Icons.Material.Filled.Error)
+            ]
+        };
+
+    private int CountByStatus(IEnumerable<string> statuses) =>
+        _certs?.Count(c => statuses.Contains(c.Status)) ?? 0;
 }
