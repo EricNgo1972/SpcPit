@@ -33,6 +33,8 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddMudServices();
 
+builder.Services.AddHealthChecks();
+
 // Data Protection — encrypts sensitive BO values (e.g. Viettel password) before they
 // reach the DAL. Keys persist to {ContentRoot}/keys so encrypted rows survive restarts.
 // Back up the keys folder together with spc-pit.db.
@@ -65,6 +67,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseAntiforgery();
+
+app.MapHealthChecks("/health");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
