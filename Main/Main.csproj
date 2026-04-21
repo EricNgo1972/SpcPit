@@ -9,6 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Csla" Version="8.*" />
     <PackageReference Include="Csla.AspNetCore" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
     <PackageReference Include="MudBlazor" Version="9.2.0" />
   </ItemGroup>
 

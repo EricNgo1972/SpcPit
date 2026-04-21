@@ -1,0 +1,57 @@
+name: Release Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version '
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set runtime ID
+        id: rid
+        run: |
+          echo "rid=win-x64" >> "$GITHUB_OUTPUT"
+          echo "ext=zip" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        run: |
+          dotnet publish Main/Main.csproj \
+            -c Release \
+            -r ${{ steps.rid.outputs.rid }} \
+            --self-contained true \
+            -o ./publish
+
+      - name: Package (Windows)
+        run: cd ./publish && zip -r ../spc-pit-win-x64.zip .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ inputs.version }}"
+          ASSET="spc-pit-win-x64.zip"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG exists - uploading asset to existing release..."
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release create "$TAG" "$ASSET" \
+              --title "SPC PIT $TAG (windows)" \
+              --notes "Release $TAG for windows-x64"
+          fi

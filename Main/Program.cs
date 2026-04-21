@@ -1,5 +1,6 @@
 using Csla.Configuration;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using MudBlazor.Services;
 using SPC.BO;
 using SPC.BO.PIT;
@@ -11,6 +12,17 @@ using Main.Components;
 using Main.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (IsServiceMode())
+{
+    // Service managers often launch from a different working directory. Pin the
+    // content root to the deployed app folder so the DB, keys, config, and static
+    // assets resolve consistently on both Windows and Linux.
+    builder.Environment.ContentRootPath = AppContext.BaseDirectory;
+}
+
+builder.Host.UseWindowsService();
+builder.Host.UseSystemd();
 
 // When launching Main.exe directly from bin/Debug, explicitly load the static-web-assets
 // manifest so package/RCL assets (e.g. MudBlazor) still resolve.
@@ -59,6 +71,12 @@ app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(typeof(SPC.Blazor.PIT.Components.Pages.PitDashboard).Assembly);
 
 app.Run();
+
+static bool IsServiceMode()
+{
+    return WindowsServiceHelpers.IsWindowsService()
+        || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("INVOCATION_ID"));
+}
 
 // Expose the implicit top-level Program class so Razor (<Router AppAssembly="@typeof(Program).Assembly">)
 // can resolve it unambiguously.
